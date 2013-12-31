@@ -30,6 +30,9 @@ SDMMCAnalyzerSettings::SDMMCAnalyzerSettings()
 	AddInterface(mProtocolInterface.get());
 	AddInterface(mSampleEdgeInterface.get());
 
+	AddExportOption(0, "Export as text file");
+	AddExportExtension(0, "text", "txt");
+
 	ClearChannels();
 	AddChannel(mClockChannel, "Clock", false);
 	AddChannel(mCommandChannel, "Command", false);

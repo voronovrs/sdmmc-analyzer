@@ -41,7 +41,7 @@ os.chdir( ".." )
 #specify the search paths/dependencies/options for gcc
 include_paths = [ "../SaleaeAnalyzerSdk-1.1.9/include" ]
 link_paths = [ "../SaleaeAnalyzerSdk-1.1.9/lib" ]
-link_dependencies = [ "-lAnalyzer" ] #refers to libAnalyzer.dylib or libAnalyzer.so
+link_dependencies = [ "-lAnalyzer64" ] #refers to libAnalyzer.dylib or libAnalyzer.so
 
 debug_compile_flags = "-O0 -w -c -fpic -g3"
 release_compile_flags = "-O3 -w -c -fpic"
