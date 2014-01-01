@@ -79,6 +79,99 @@ struct MMCResponse SDMMCHelpers::MMCCommandResponse(unsigned int index)
 	return responses[index];
 }
 
+/* According to eMMC 4.51 specs */
+static struct MMCCommand commands[64] = {
+		"GO_IDLE_STATE",		/* CMD00	arg:00000000 => GO_IDLE_STATE	
+											arg:F0F0F0F0 => GO_PRE_IDLE_STATE 
+											arg:FFFFFFFA => BOOT_INITIATION */
+		"SEND_OP_COND",			/* CMD01 */
+		"ALL_SEND_CID",			/* CMD02 */
+		"SET_RELATIVE_ADDR",	/* CMD03 */
+		"SET_DSR",				/* CMD04 */
+		"SLEEP_AWAKE",			/* CMD05 */
+		"SWITCH",				/* CMD06 */
+		"SELECT/DESELECT_CARD",	/* CMD07 */
+		"SEND_EXT_CSD",			/* CMD08 */
+		"SEND_CSD",				/* CMD09 */
+		"SEND_CID",				/* CMD10 */
+		"_Obsolete",			/* CMD11 */
+		"STOP_TRANSMISSION",	/* CMD12 */
+		"SEND_STATUS",			/* CMD13 */
+		"BUSTEST_R",			/* CMD14 */
+		"GO_INACTIVE_STATE",	/* CMD15 */
+		"SET_BLOCKLEN",			/* CMD16 */
+		"READ_SINGLE_BLOCK",	/* CMD17 */
+		"READ_MULTIPLE_BLOCK",	/* CMD18 */
+		"BUSTEST_W",			/* CMD19 */
+		"_Obsolete",			/* CMD20 */
+		"SEND_TUNING_BLOCK",	/* CMD21 */
+		"_Reserved",			/* CMD22 */
+		"SET_BLOCK_COUNT",		/* CMD23 */
+		"WRITE_BLOCK",			/* CMD24 */
+		"WRITE_MULTIPLE_BLOCK",	/* CMD25 */
+		"PROGRAM_CID",			/* CMD26 */
+		"PROGRAM_CSD",			/* CMD27 */
+		"SET_WRITE_PROT",		/* CMD28 */
+		"CLR_WRITE_PROT",		/* CMD29 */
+		"SEND_WRITE_PROT",		/* CMD30 */
+		"SEND_WRITE_PROT_TYPE",	/* CMD31 */
+		"_Reserved",			/* CMD32 */
+		"_Reserved",			/* CMD33 */
+		"_Reserved",			/* CMD34 */
+		"ERASE_GROUP_START",	/* CMD35 */
+		"ERASE_GROUP_END",		/* CMD36 */
+		"_Reserved",			/* CMD37 */
+		"ERASE",				/* CMD38 */
+		"FAST_IO",				/* CMD39 */
+		"GO_IRQ_STATE",			/* CMD40 */
+		"_Reserved",			/* CMD41 */
+		"LOCK_UNLOCK",			/* CMD42 */
+		"_Reserved",			/* CMD43 */
+		"_Reserved",			/* CMD44 */
+		"_Reserved",			/* CMD45 */
+		"_Reserved",			/* CMD46 */
+		"_Reserved",			/* CMD47 */
+		"_Reserved",			/* CMD48 */
+		"SET_TIME",				/* CMD49 */
+		"_Reserved",			/* CMD50 */
+		"_Reserved",			/* CMD51 */
+		"_Reserved",			/* CMD52 */
+		"PROTOCOL_RD",			/* CMD53 */
+		"PROTOCOL_WR",			/* CMD54 */
+		"APP_CMD",				/* CMD55 */
+		"GEN_CMD",				/* CMD56 */
+		"_Reserved",			/* CMD57 */
+		"_Reserved",			/* CMD58 */
+		"_Reserved",			/* CMD59 */
+		"_ReservedMFR",			/* CMD60 */
+		"_ReservedMFR",			/* CMD61 */
+		"_ReservedMFR",			/* CMD62 */
+		"_ReservedMFR",			/* CMD63 */
+};
+
+static struct MMCCommand invalid_response = {
+	"_INVALID_"
+};
+
+struct MMCommand SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned int args)
+{
+	if (index > 63)
+		return invalid_response;
+		
+	if (index == 0) {
+		if (args == 0x00000000)
+			return "GO_IDLE_STATE"
+		else if (args == 0xF0F0F0F0)
+			return "GO_PRE_IDLE_STATE"
+		else if (args == 0xFFFFFFFA)
+			return "BOOT_INITIATION"
+		else
+			return "_INVALID_CMD01_"
+	}
+
+	return commands[index];
+}
+
 /*
   Polynomial = 0x89 (2^7 + 2^3 + 1)
   width      = 7 bit

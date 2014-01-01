@@ -31,18 +31,206 @@ void SDMMCAnalyzerResults::GenerateBubbleText(U64 frame_index, Channel& channel,
 			AddResultString("Card sending");
 		break;
 
-	case FRAMETYPE_COMMAND:
+case FRAMETYPE_COMMAND:
 	{
-		char str_cmd[4];
+		char str_cmd[33];
 		char str_arg[33];
+		char str_desc[33];
+		char str_buf[512];
 
 		AnalyzerHelpers::GetNumberString(frame.mData1, Decimal, 6, str_cmd, sizeof(str_cmd));
 		AnalyzerHelpers::GetNumberString(frame.mData2, display_base, 32, str_arg, sizeof(str_arg));
 
+		str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2);
+		
 		AddResultString("CMD");
 		AddResultString("CMD", str_cmd);
-		AddResultString("CMD", str_cmd, ", arg=", str_arg);
-		break;
+		AddResultString("CMD", str_cmd, ", arg=", str_arg, "  ", str_desc);
+
+		switch (frame.mData1) {
+		case 3: //SET_RELATIVE_ADDR
+		case 7: //SELECT/DESELECT_CARD
+		case 9: //SEND_CSD
+		case 10: //SEND_CID
+		case 15: //GO_INACTIVE_STATE
+		case 55: //APP_CMD
+			char str_rca[33];
+			char str_stuff[33];
+			
+			int rca = (frame.mData2 >> 16) & 0xFF;			//[31:16] RCA 
+			int stuff = frame.mData2 & 0xFF;				//[15:0] stuff bits
+			
+			AnalyzerHelpers::GetNumberString(rca, display_base, 32, str_rca, sizeof(str_rca));
+			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
+			
+			sprintf(str_buf, ", arg=%s, rca=%s, stuff=%s", str_arg, str_rca, str_stuff);
+			break;
+		case 4: //SET_DSR
+			char str_dsr[33];
+			char str_stuff[33];
+			
+			int dsr = (frame.mData2 >> 16) & 0xFF;			//[31:16] DSR 
+			int stuff = frame.mData2 & 0xFF;				//[15:0] stuff bits
+			
+			AnalyzerHelpers::GetNumberString(dsr, display_base, 32, str_dsr, sizeof(str_dsr));
+			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
+			
+			sprintf(str_buf, ", arg=%s, dsr=%s, stuff=%s", str_arg, str_dsr, str_stuff);
+			break;
+		case 5: //SLEEP_AWAKE
+			char str_rca[33];
+			char str_sleepawake[33];
+			char str_stuff[33];
+			
+			int rca = (frame.mData2 >> 16) & 0xFF;			//[31:16] RCA 
+			int sleepawake = (frame.mData2 >> 15) & 0xF;	//[15]Sleep/Awake 
+			int stuff = frame.mData2 & 0xFF;				//[14:0] stuff bits
+			
+			AnalyzerHelpers::GetNumberString(rca, display_base, 32, str_rca, sizeof(str_rca));
+			AnalyzerHelpers::GetNumberString(sleepawake, display_base, 4, str_sleepawake, sizeof(str_sleepawake));
+			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
+			
+			sprintf(str_buf, ", arg=%s, rca=%s, sleepawake=%s, stuff=%s", str_arg, str_rca, str_sleepawake, str_stuff);
+			break;
+		case 6: //SWITCH
+			char str_access[33];
+			char str_index[33];
+			char str_value[33];
+			char str_cmd2[33];
+			
+			int access = (frame.mData2 >> 24) & 0xF;   		//[25:24] Access 0=cmd_set 1=set_bits 2=clear_bits 3=write_byte
+			int index = (frame.mData2 >> 16) & 0xFF; 		//[23:16] Index
+			int value = (frame.mData2 >> 8) & 0xFF;  		//[15:8] Value
+			int cmd = frame.mData2 & 0xF;              		//[2:0] Cmd Set
+			
+			AnalyzerHelpers::GetNumberString(access, display_base, 4, str_access, sizeof(str_access));
+			AnalyzerHelpers::GetNumberString(index, display_base, 32, str_index, sizeof(str_index));
+			AnalyzerHelpers::GetNumberString(value, display_base, 32, str_value, sizeof(str_value));
+			AnalyzerHelpers::GetNumberString(cmd, display_base, 4, str_cmd2, sizeof(str_cmd2));
+			
+			sprintf(str_buf, ", arg=%s, access=%s, index=%s, value=%s, cmd=%s", str_arg, str_access, str_index, str_value, str_cmd2);
+			
+			AddResultString("CMD", str_cmd, str_buf);
+			break;
+		case 12: //STOP_TRANSMISSION
+		case 13: //SEND_STATUS
+			char str_rca[33];
+			char str_stuff[33];
+			char str_hpi[33];
+	
+			int rca = (frame.mData2 >> 16) & 0xFF;	//[31:16] RCA
+			int stuff = (frame.mData2 >> 1) & 0xFF; //[15:1] stuff bits
+			int hpi = frame.mData2 & 0xF;			//[0] HPI
+			
+			AnalyzerHelpers::GetNumberString(rca3, display_base, 32, str_rca3, sizeof(str_rca3));
+			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
+			AnalyzerHelpers::GetNumberString(hpi, display_base, 4, str_hpi, sizeof(str_hpi));
+			
+			sprintf(str_buf, ", arg=%s, rca3=%s, stuff=%s, hpi=%s", str_arg, str_rca3, str_stuff, str_hpi);
+			break;
+		case 23: //SET_BLOCK_COUNT
+			char str_rwritereq[33];
+			char str_tagreq[33];
+			char str_ctx_id[33];
+			char str_forced[33];
+			char str_num_blocks[33];
+			
+		// default
+			int rwritereq = (frame.mData2 >> 31) & 0xF;	//[31] Reliable Write Request
+														//[30] ‘0’ non- packed
+			int tagreq = (frame.mData2 >> 29) & 0xF;	//[29] tag request
+			int ctx_id = (frame.mData2 >> 25) & 0xFF;	//[28:25] context ID 
+			int forced = (frame.mData2 >> 24) & 0xF;	//[24]: forced programming
+														//[23:16] set to 0 
+			int num_blocks = frame.mData2 & 0xFF;		//[15:0] number of blocks
+		// packed
+			int p_zero = (frame.mData2 >> 31) & 0xF;	//[31] set to 0
+			int p_one = (frame.mData2 >> 30) & 0xF;		//[30] ‘1’ packed
+			int p_zero2 = (frame.mData2 >> 16) & 0xFF;	//[29:16] set to 0 
+			int num_blocks2 = frame.mData2 & 0xFF;		//[15:0] number of blocks
+			
+			if (p_zero == 0 && p_one == 1 && p_zero2 == 0) { // seems packed
+				AnalyzerHelpers::GetNumberString(num_blocks2, display_base, 32, str_num_blocks, sizeof(str_num_blocks));
+			
+				sprintf(str_buf, ", arg=%s, num_blocks=%s", str_arg, str_num_blocks);
+				
+			} else { // has to be default then
+				AnalyzerHelpers::GetNumberString(rwritereq, display_base, 4, str_rwritereq, sizeof(str_rwritereq));
+				AnalyzerHelpers::GetNumberString(tagreq, display_base, 32, str_tagreq, sizeof(str_tagreq));
+				AnalyzerHelpers::GetNumberString(ctx_id, display_base, 32, str_ctx_id, sizeof(str_ctx_id));
+				AnalyzerHelpers::GetNumberString(forced, display_base, 4, str_forced, sizeof(str_forced));
+				AnalyzerHelpers::GetNumberString(num_blocks, display_base, 4, str_num_blocks, sizeof(str_num_blocks));
+				
+				sprintf(str_buf, ", arg=%s, rwritereq=%s, tagreq=%s, ctx_id=%s, forced=%s, num_blocks=%s", str_arg, str_rwritereq, str_tagreq, str_ctx_id, str_forced, num_blocks);
+			}
+			break;
+		case 38: //ERASE
+			char str_securereq[33];
+			char str_forcegarb[33];
+			char str_discard_en[33];
+			char str_ident_writeblocks[33];
+			
+			int securereq = (frame.mData2 >> 31) & 0xF;	//[31] Secure request
+			//[30:16] set to 0 
+			int forcegarb = (frame.mData2 >> 15) & 0xF;	//[15] Force Garbage Collect request
+			//[14:2] set to 0
+			int discard_en = (frame.mData2 >> 1) & 0xF;	//[1] Discard Enable
+			int ident_writeblocks = frame.mData2 & 0xF;	//[0] Identify Write Blocks for Erase (or TRIM Enable)
+			
+			AnalyzerHelpers::GetNumberString(securereq, display_base, 4, str_securereq, sizeof(str_securereq));
+			AnalyzerHelpers::GetNumberString(forcegarb, display_base, 4, str_forcegarb, sizeof(str_forcegarb));
+			AnalyzerHelpers::GetNumberString(discard_en, display_base, 4, str_discard_en, sizeof(str_discard_en));
+			AnalyzerHelpers::GetNumberString(ident_writeblocks, display_base, 4, str_ident_writeblocks, sizeof(str_ident_writeblocks));
+			
+			sprintf(str_buf, ", arg=%s, securereq=%s, forcegarbage=%s, discard_en=%s, ident_writeblocks=%s", str_arg, str_securereq, str_forcegarb, str_discard_en, str_ident_writeblocks);
+			break;
+		case 39: //FAST_IO
+			char str_rca[33];
+			char str_reg_wflag[33];
+			char str_reg_addr[33];
+			char str_reg_data[33];
+			
+			int rca = (frame.mData2 >> 16) & 0xFF;		//[31:16] RCA 
+			int reg_wflag = (frame.mData2 >> 15) & 0xF;	//[15:15] register write flag
+			int reg_addr = (frame.mData2 >> 8) & 0xFF;	//[14:8] register address 
+			int reg_data = frame.mData2 & 0xFF;			//[7:0] register data
+			
+			AnalyzerHelpers::GetNumberString(rca, display_base, 32, str_rca, sizeof(str_rca));
+			AnalyzerHelpers::GetNumberString(reg_wflag, display_base, 4, str_reg_wflag, sizeof(str_reg_wflag));
+			AnalyzerHelpers::GetNumberString(reg_addr, display_base, 32, str_reg_addr, sizeof(str_reg_addr));
+			AnalyzerHelpers::GetNumberString(reg_data, display_base, 32, str_reg_data, sizeof(str_reg_data));
+			
+			sprintf(str_buf, ", arg=%s, rca=%s, reg_wflag=%s, reg_addr=%s, reg_data=%s", str_arg, str_rca, str_reg_wflag, str_reg_addr, str_reg_data);
+			break;
+		case 53: //PROTOCOL_RD
+		case 54: //PROTOCOL_WR
+			char str_sec_spec[33];
+			char str_sec_prot[33];
+			char str_reserv[33];
+			
+			int sec_spec = (frame.mData2 >> 16) & 0xFF;	//[16:31] Security Protocol Specific
+			int sec_prot = (frame.mData2 >> 8) & 0xFF;	//[15:8] Security Protocol
+			int reserv = frame.mData2 & 0xFF;			//[7:0] reserved
+			
+			AnalyzerHelpers::GetNumberString(sec_spec, display_base, 32, str_sec_spec, sizeof(str_sec_spec));
+			AnalyzerHelpers::GetNumberString(sec_prot, display_base, 32, str_sec_prot, sizeof(str_sec_prot));
+			AnalyzerHelpers::GetNumberString(reserv, display_base, 32, str_reserv, sizeof(str_reserv));
+			
+			sprintf(str_buf, ", arg=%s, sec_specific=%s, sec_protocol=%s, reserv=%s", str_arg, str_sec_spec, str_sec_prot, str_reserv);
+			break;
+		case 56: //GEN_CMD
+			char str_stuff[33];
+			char str_rd_wr[33];
+			
+			int stuff = (frame.mData2 >> 1) & 0xFF;	//[31:1] stuff bits. 
+			int rd_wr = frame.mData2 & 0xF;			//[0]: RD/WR1
+			
+			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
+			AnalyzerHelpers::GetNumberString(rd_wr, display_base, 4, str_rd_wr, sizeof(str_rd_wr));
+			
+			sprintf(str_buf, ", arg=%s, stuff=%s, rd_wr1=%s", str_arg, str_stuff, str_rd_wr);
+			break;
+		}
 	}
 
 	case FRAMETYPE_RESPONSE:
