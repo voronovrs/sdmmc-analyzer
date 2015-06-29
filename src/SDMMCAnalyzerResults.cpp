@@ -1,7 +1,7 @@
+#include "SDMMCHelpers.h"
 #include "SDMMCAnalyzerResults.h"
 #include "SDMMCAnalyzer.h"
 #include "SDMMCAnalyzerSettings.h"
-#include "SDMMCHelpers.h"
 
 #include <AnalyzerHelpers.h>
 #include <iostream>
@@ -35,7 +35,7 @@ case FRAMETYPE_COMMAND:
 	{
 		char str_cmd[33];
 		char str_arg[33];
-		char str_desc[33];
+		const char *str_desc;
 		char str_buf[512];
 
 		AnalyzerHelpers::GetNumberString(frame.mData1, Decimal, 6, str_cmd, sizeof(str_cmd));
@@ -54,6 +54,7 @@ case FRAMETYPE_COMMAND:
 		case 10: //SEND_CID
 		case 15: //GO_INACTIVE_STATE
 		case 55: //APP_CMD
+        {
 			char str_rca[33];
 			char str_stuff[33];
 			
@@ -65,7 +66,9 @@ case FRAMETYPE_COMMAND:
 			
 			sprintf(str_buf, ", arg=%s, rca=%s, stuff=%s", str_arg, str_rca, str_stuff);
 			break;
+        }
 		case 4: //SET_DSR
+            {
 			char str_dsr[33];
 			char str_stuff[33];
 			
@@ -76,8 +79,9 @@ case FRAMETYPE_COMMAND:
 			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
 			
 			sprintf(str_buf, ", arg=%s, dsr=%s, stuff=%s", str_arg, str_dsr, str_stuff);
-			break;
+			break;}
 		case 5: //SLEEP_AWAKE
+            {
 			char str_rca[33];
 			char str_sleepawake[33];
 			char str_stuff[33];
@@ -91,8 +95,9 @@ case FRAMETYPE_COMMAND:
 			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
 			
 			sprintf(str_buf, ", arg=%s, rca=%s, sleepawake=%s, stuff=%s", str_arg, str_rca, str_sleepawake, str_stuff);
-			break;
+			break;}
 		case 6: //SWITCH
+            {
 			char str_access[33];
 			char str_index[33];
 			char str_value[33];
@@ -111,9 +116,10 @@ case FRAMETYPE_COMMAND:
 			sprintf(str_buf, ", arg=%s, access=%s, index=%s, value=%s, cmd=%s", str_arg, str_access, str_index, str_value, str_cmd2);
 			
 			AddResultString("CMD", str_cmd, str_buf);
-			break;
+			break;}
 		case 12: //STOP_TRANSMISSION
 		case 13: //SEND_STATUS
+            {
 			char str_rca[33];
 			char str_stuff[33];
 			char str_hpi[33];
@@ -122,13 +128,14 @@ case FRAMETYPE_COMMAND:
 			int stuff = (frame.mData2 >> 1) & 0xFF; //[15:1] stuff bits
 			int hpi = frame.mData2 & 0xF;			//[0] HPI
 			
-			AnalyzerHelpers::GetNumberString(rca3, display_base, 32, str_rca3, sizeof(str_rca3));
+			AnalyzerHelpers::GetNumberString(rca, display_base, 32, str_rca, sizeof(str_rca));
 			AnalyzerHelpers::GetNumberString(stuff, display_base, 32, str_stuff, sizeof(str_stuff));
 			AnalyzerHelpers::GetNumberString(hpi, display_base, 4, str_hpi, sizeof(str_hpi));
 			
-			sprintf(str_buf, ", arg=%s, rca3=%s, stuff=%s, hpi=%s", str_arg, str_rca3, str_stuff, str_hpi);
-			break;
+			sprintf(str_buf, ", arg=%s, rca=%s, stuff=%s, hpi=%s", str_arg, str_rca, str_stuff, str_hpi);
+			break;}
 		case 23: //SET_BLOCK_COUNT
+            {
 			char str_rwritereq[33];
 			char str_tagreq[33];
 			char str_ctx_id[33];
@@ -163,8 +170,9 @@ case FRAMETYPE_COMMAND:
 				
 				sprintf(str_buf, ", arg=%s, rwritereq=%s, tagreq=%s, ctx_id=%s, forced=%s, num_blocks=%s", str_arg, str_rwritereq, str_tagreq, str_ctx_id, str_forced, num_blocks);
 			}
-			break;
+			break;}
 		case 38: //ERASE
+            {
 			char str_securereq[33];
 			char str_forcegarb[33];
 			char str_discard_en[33];
@@ -183,8 +191,9 @@ case FRAMETYPE_COMMAND:
 			AnalyzerHelpers::GetNumberString(ident_writeblocks, display_base, 4, str_ident_writeblocks, sizeof(str_ident_writeblocks));
 			
 			sprintf(str_buf, ", arg=%s, securereq=%s, forcegarbage=%s, discard_en=%s, ident_writeblocks=%s", str_arg, str_securereq, str_forcegarb, str_discard_en, str_ident_writeblocks);
-			break;
+			break;}
 		case 39: //FAST_IO
+            {
 			char str_rca[33];
 			char str_reg_wflag[33];
 			char str_reg_addr[33];
@@ -201,9 +210,10 @@ case FRAMETYPE_COMMAND:
 			AnalyzerHelpers::GetNumberString(reg_data, display_base, 32, str_reg_data, sizeof(str_reg_data));
 			
 			sprintf(str_buf, ", arg=%s, rca=%s, reg_wflag=%s, reg_addr=%s, reg_data=%s", str_arg, str_rca, str_reg_wflag, str_reg_addr, str_reg_data);
-			break;
+			break;}
 		case 53: //PROTOCOL_RD
 		case 54: //PROTOCOL_WR
+            {
 			char str_sec_spec[33];
 			char str_sec_prot[33];
 			char str_reserv[33];
@@ -217,8 +227,9 @@ case FRAMETYPE_COMMAND:
 			AnalyzerHelpers::GetNumberString(reserv, display_base, 32, str_reserv, sizeof(str_reserv));
 			
 			sprintf(str_buf, ", arg=%s, sec_specific=%s, sec_protocol=%s, reserv=%s", str_arg, str_sec_spec, str_sec_prot, str_reserv);
-			break;
+			break;}
 		case 56: //GEN_CMD
+            {
 			char str_stuff[33];
 			char str_rd_wr[33];
 			
@@ -229,7 +240,7 @@ case FRAMETYPE_COMMAND:
 			AnalyzerHelpers::GetNumberString(rd_wr, display_base, 4, str_rd_wr, sizeof(str_rd_wr));
 			
 			sprintf(str_buf, ", arg=%s, stuff=%s, rd_wr1=%s", str_arg, str_stuff, str_rd_wr);
-			break;
+			break;}
 		}
 	}
 

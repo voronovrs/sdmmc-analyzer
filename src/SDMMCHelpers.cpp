@@ -153,7 +153,7 @@ static struct MMCCommand invalid_response = {
 	"_INVALID_"
 };
 
-struct MMCommand SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned int args)
+const char * SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned int args)
 {
 	if (index > 63)
 		return invalid_response;
