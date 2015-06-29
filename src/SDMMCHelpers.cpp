@@ -149,27 +149,27 @@ static struct MMCCommand commands[64] = {
 		"_ReservedMFR",			/* CMD63 */
 };
 
-static struct MMCCommand invalid_response = {
+static struct MMCCommand invalid_response_cmd = {
 	"_INVALID_"
 };
 
 const char * SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned int args)
 {
 	if (index > 63)
-		return invalid_response;
+		return invalid_response_cmd.desc;
 		
 	if (index == 0) {
 		if (args == 0x00000000)
-			return "GO_IDLE_STATE"
+			return "GO_IDLE_STATE";
 		else if (args == 0xF0F0F0F0)
-			return "GO_PRE_IDLE_STATE"
+			return "GO_PRE_IDLE_STATE";
 		else if (args == 0xFFFFFFFA)
-			return "BOOT_INITIATION"
+			return "BOOT_INITIATION";
 		else
-			return "_INVALID_CMD01_"
+			return "_INVALID_CMD01_";
 	}
 
-	return commands[index];
+	return commands[index].desc;
 }
 
 /*
