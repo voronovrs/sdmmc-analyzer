@@ -1,17 +1,23 @@
 SD/MMC Analyzer for Logic
 =========================
 
-This implements an SD/MMC protocol analyzer for Logic (http://www.saleae.com).
+** this is a fork of the original project by dirker **
+
+This implements an SD/MMC protocol analyzer for the Logic
+(http://www.saleae.com) software for Saleae logic analyzers.
 
 Compiling
 ---------
 
-In order to compile the code the Saleae Analyzer SDK is needed which can be download via the Saleae Community pages (http://www.saleae.com/community/). The code is tested against version 1.1.9 of the SDK.
+In order to compile the code the Saleae Analyzer SDK is needed which can be
+download via the Saleae Community pages (http://www.saleae.com/community/). The
+code is tested against version 1.1.32 of the SDK.
 
-Prior to compiling the SDK zip file should be unpacked into the directory containing the cloned sdmmc-analyzer repository, e.g.:
+Prior to compiling the SDK zip file should be unpacked into the directory
+containing the cloned sdmmc-analyzer repository, e.g.:
 
     +-rootdir/
-      +-SaleaeAnalyzerSdk-1.1.9/
+      +-SaleaeAnalyzerSdk-1.1.32/
       +-sdmmc-analyzer/
 
 ### Mac OS X
