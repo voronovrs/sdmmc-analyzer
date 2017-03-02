@@ -39,7 +39,7 @@ void SDMMCAnalyzer::WorkerThread()
 		ReportProgress(mClock->GetSampleNumber());
 		CheckIfThreadShouldExit();
 		AdvanceToNextClock();
-		
+
 		cmdindex = TryReadCommand();
 		if (cmdindex < 0) {
 			/* continue if parsing the command failed */
@@ -90,14 +90,14 @@ void SDMMCAnalyzer::AdvanceToNextClock()
 int SDMMCAnalyzer::TryReadCommand()
 {
 	int index;
-	
+
 	/* check for start bit */
 	if (mCommand->GetBitState() != BIT_LOW)
 		return -1;
 
 	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Start, mSettings->mCommandChannel);
 	AdvanceToNextClock();
-	
+
 	/* transfer bit */
 	if (mCommand->GetBitState() != BIT_HIGH) {
 		/* if host is not transferring this is no command */
@@ -127,7 +127,7 @@ int SDMMCAnalyzer::TryReadCommand()
 
 		frame.mEndingSampleInclusive = mClock->GetSampleNumber() - 1;
 		mResults->AddFrame(frame);
-		
+
 		/* save index for returning */
 		index = (int)frame.mData1;
 	}
@@ -154,7 +154,7 @@ int SDMMCAnalyzer::TryReadCommand()
 
 	mResults->CommitResults();
 	ReportProgress(mClock->GetSampleNumber());
-	
+
 	return index;
 }
 
@@ -170,7 +170,7 @@ int SDMMCAnalyzer::WaitForAndReadMMCResponse(struct MMCResponse response)
 
 	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Start, mSettings->mCommandChannel);
 	AdvanceToNextClock();
-	
+
 	/* transfer bit */
 	if (mCommand->GetBitState() != BIT_LOW) {
 		/* if card is not transferring this is no response */
@@ -231,7 +231,7 @@ int SDMMCAnalyzer::WaitForAndReadMMCResponse(struct MMCResponse response)
 
 	mResults->CommitResults();
 	ReportProgress(mClock->GetSampleNumber());
-	
+
 	return 1;
 }
 

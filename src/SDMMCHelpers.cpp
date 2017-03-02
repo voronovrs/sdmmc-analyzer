@@ -81,8 +81,8 @@ struct MMCResponse SDMMCHelpers::MMCCommandResponse(unsigned int index)
 
 /* According to eMMC 4.51 specs */
 static struct MMCCommand commands[64] = {
-		"GO_IDLE_STATE",		/* CMD00	arg:00000000 => GO_IDLE_STATE	
-											arg:F0F0F0F0 => GO_PRE_IDLE_STATE 
+		"GO_IDLE_STATE",		/* CMD00	arg:00000000 => GO_IDLE_STATE
+											arg:F0F0F0F0 => GO_PRE_IDLE_STATE
 											arg:FFFFFFFA => BOOT_INITIATION */
 		"SEND_OP_COND",			/* CMD01 */
 		"ALL_SEND_CID",			/* CMD02 */
@@ -157,7 +157,7 @@ const char * SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned in
 {
 	if (index > 63)
 		return invalid_response_cmd.desc;
-		
+
 	if (index == 0) {
 		if (args == 0x00000000)
 			return "GO_IDLE_STATE";
