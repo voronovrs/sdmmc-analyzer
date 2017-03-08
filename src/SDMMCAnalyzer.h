@@ -29,6 +29,7 @@ protected:
 	void AdvanceToNextClock();
 	int TryReadCommand();
 	int WaitForAndReadMMCResponse(struct MMCResponse response);
+	void ReadResponseBit(ResponseReadState *state, struct Frame *frame);
 
 protected:
 	std::auto_ptr<SDMMCAnalyzerSettings> mSettings;

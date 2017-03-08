@@ -13,6 +13,26 @@ enum MMCResponseType {
 	MMC_RSP_R5,
 };
 
+enum ResponseReadPhase {
+	RESP_INIT, // Command is still at 1
+	RESP_READDIR, // Direction bit being read
+	RESP_IGNORED, // 6 bits - "command index" or "check bits"
+	RESP_DATA,
+	RESP_CRC, // 0 or 7 bits
+	RESP_ERROR,
+	RESP_STOP,
+	RESP_END
+};
+
+struct ResponseReadState {
+	enum ResponseReadPhase phase;
+	enum MMCResponseType responseType;
+	U8 ignore_cnt;
+	U8 data_bits; // data length, depends only on command index
+	U8 data_cnt;
+	U8 crc_cnt;
+};
+
 struct MMCResponse
 {
 	enum MMCResponseType mType;
