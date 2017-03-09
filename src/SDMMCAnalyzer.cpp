@@ -29,9 +29,14 @@ void SDMMCAnalyzer::WorkerThread()
 	SetAnalyzerResults(mResults.get());
 
 	mResults->AddChannelBubblesWillAppearOn(mSettings->mCommandChannel);
+	mResults->AddChannelBubblesWillAppearOn(mSettings->mDataChannel0);
 
 	mClock = GetAnalyzerChannelData(mSettings->mClockChannel);
 	mCommand = GetAnalyzerChannelData(mSettings->mCommandChannel);
+	mData0 = GetAnalyzerChannelData(mSettings->mDataChannel0);
+	mData1 = GetAnalyzerChannelData(mSettings->mDataChannel1);
+	mData2 = GetAnalyzerChannelData(mSettings->mDataChannel2);
+	mData3 = GetAnalyzerChannelData(mSettings->mDataChannel3);
 
 	while (true) {
 		int cmdindex;
@@ -85,6 +90,10 @@ void SDMMCAnalyzer::AdvanceToNextClock()
 	} while (mClock->GetBitState() != search);
 
 	mCommand->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData0->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData1->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData2->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData3->AdvanceToAbsPosition(mClock->GetSampleNumber());
 }
 
 int SDMMCAnalyzer::TryReadCommand()
@@ -127,6 +136,7 @@ int SDMMCAnalyzer::TryReadCommand()
 
 		frame.mEndingSampleInclusive = mClock->GetSampleNumber() - 1;
 		mResults->AddFrame(frame);
+		mResults->CommitResults();
 
 		/* save index for returning */
 		index = (int)frame.mData1;
@@ -147,6 +157,7 @@ int SDMMCAnalyzer::TryReadCommand()
 
 		frame.mEndingSampleInclusive = mClock->GetSampleNumber() - 1;
 		mResults->AddFrame(frame);
+		mResults->CommitResults();
 	}
 
 	/* stop bit */
@@ -168,15 +179,25 @@ int SDMMCAnalyzer::WaitForAndReadMMCResponse(struct MMCResponse response)
 	if (timeout < 0)
 		return -1;
 
-	// Start ReadResponse state machine
-	Frame frame;
+	// Frame objects used by state machine functions - can't be created there
+	// (lifetime)
+	Frame respFrame;
+	Frame dataFrame;
+	// Start ReadResponse & ReadData state machine
 	ResponseReadState respState = {RESP_INIT, response.mType, 0, response.mBits, 0};
+	DataReadState dataState = {DATA_INIT, 0, 0};
+	if (!response.hasDataBlock) {
+		dataState.phase = DATA_END;
+	}
 
-	while (respState.phase != RESP_END && respState.phase != RESP_ERROR) {
-		ReadResponseBit(&respState, &frame);
+	while (respState.phase != RESP_ERROR && dataState.phase != DATA_ERROR &&
+			!(respState.phase == RESP_END && dataState.phase == DATA_END)) {
+		ReadResponseBit(&respState, &respFrame);
+		ReadDataBit(&dataState, &dataFrame);
 		AdvanceToNextClock();
 	}
 
+	mResults->CommitResults();
 	ReportProgress(mClock->GetSampleNumber());
 
 	return 1;
@@ -192,7 +213,8 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 		case RESP_READDIR:
 			if (mCommand->GetBitState() != BIT_LOW) {
 				/* if card is not transferring this is no response */
-				mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::X, mSettings->mCommandChannel);
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::X, mSettings->mCommandChannel);
 				state->phase = RESP_ERROR;
 			} else {
 				state->phase = RESP_IGNORED;
@@ -266,6 +288,88 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 
 }
 
+void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
+	switch(state->phase) {
+		case DATA_INIT:
+			if (mData0->GetBitState() == BIT_LOW) {
+				/* other data lines must be at 0, too */
+				if (mData1->GetBitState() != BIT_LOW ||
+						mData2->GetBitState() != BIT_LOW ||
+						mData3->GetBitState() != BIT_LOW) {
+					mResults->AddMarker(mClock->GetSampleNumber(),
+							AnalyzerResults::X, mSettings->mDataChannel0);
+					state->phase = DATA_ERROR;
+				} else {
+					mResults->AddMarker(mClock->GetSampleNumber(),
+							AnalyzerResults::Start, mSettings->mDataChannel0);
+					state->phase = DATA_DATA;
+				}
+			}
+			return;
+		case DATA_DATA:
+			if (state->data_cnt % 2 == 0) {
+				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_DATA_CONTENTS;
+				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
+				frame->mData1 = 0;
+				frame->mData2 = 0;
+				frame->mFlags = 0;
+			}
+			frame->mData1 = (frame->mData1 << 1) | mData3->GetBitState();
+			frame->mData1 = (frame->mData1 << 1) | mData2->GetBitState();
+			frame->mData1 = (frame->mData1 << 1) | mData1->GetBitState();
+			frame->mData1 = (frame->mData1 << 1) | mData0->GetBitState();
+			if (state->data_cnt % 2 == 1) {
+				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
+				mResults->AddFrame(*frame);
+				mResults->CommitResults();
+			}
+			/* last data bit only */
+			if (state->data_cnt == 1023) {
+				state->phase = DATA_CRC;
+			}
+			state->data_cnt++;
+			return;
+		case DATA_CRC:
+			if (state->crc_cnt == 0) {
+				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_DATA_CRC;
+				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
+				frame->mData1 = 0;
+				frame->mData2 = 0;
+				frame->mFlags = 0;
+			}
+			frame->mData1 <<= 1;
+			frame->mData1 |= (mData0->GetBitState());
+			frame->mData1 |= (mData1->GetBitState() << 16);
+			frame->mData1 |= (mData2->GetBitState() << 32);
+			frame->mData1 |= (mData3->GetBitState() << 48);
+			if (state->crc_cnt == 15) {
+				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
+				mResults->AddFrame(*frame);
+				mResults->CommitResults();
+				state->phase = DATA_STOP;
+			}
+			state->crc_cnt++;
+			return;
+		case DATA_STOP:
+			if (mData0->GetBitState() == BIT_LOW ||
+					mData1->GetBitState() == BIT_LOW ||
+					mData2->GetBitState() == BIT_LOW ||
+					mData3->GetBitState() == BIT_LOW) {
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::X, mSettings->mDataChannel0);
+				state->phase = DATA_ERROR;
+			} else {
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::Stop, mSettings->mDataChannel0);
+				state->phase = DATA_END;
+			}
+			return;
+			/* this method does not gets called for END and ERROR phases */
+		case DATA_ERROR:
+		case DATA_END:
+			return;
+	}
+}
 /*
  * loader hooks
  */

@@ -19,9 +19,18 @@ enum ResponseReadPhase {
 	RESP_IGNORED, // 6 bits - "command index" or "check bits"
 	RESP_DATA,
 	RESP_CRC, // 0 or 7 bits
-	RESP_ERROR,
 	RESP_STOP,
+	RESP_ERROR,
 	RESP_END
+};
+
+enum DataReadPhase {
+	DATA_INIT, // Before start bit
+	DATA_DATA, // Data being read
+	DATA_CRC,  // 16 bits
+	DATA_STOP, // Stop bit
+	DATA_ERROR, // Decoding error
+	DATA_END
 };
 
 struct ResponseReadState {
@@ -33,12 +42,19 @@ struct ResponseReadState {
 	U8 crc_cnt;
 };
 
+struct DataReadState { // FIXME: take "block len" into account
+	enum DataReadPhase phase;
+	U16 data_cnt;
+	U8 crc_cnt;
+};
+
 struct MMCResponse
 {
 	enum MMCResponseType mType;
 	unsigned int mBits;
 	int mTimeout;
 	bool mBusy;
+	bool hasDataBlock;
 };
 
 struct MMCCommand

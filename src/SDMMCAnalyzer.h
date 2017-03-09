@@ -29,7 +29,8 @@ protected:
 	void AdvanceToNextClock();
 	int TryReadCommand();
 	int WaitForAndReadMMCResponse(struct MMCResponse response);
-	void ReadResponseBit(ResponseReadState *state, struct Frame *frame);
+	void ReadResponseBit(ResponseReadState *state, struct Frame *respFrame);
+	void ReadDataBit(DataReadState *state, struct Frame *dataFrame);
 
 protected:
 	std::auto_ptr<SDMMCAnalyzerSettings> mSettings;
@@ -40,6 +41,10 @@ protected:
 
 	AnalyzerChannelData *mClock;
 	AnalyzerChannelData *mCommand;
+	AnalyzerChannelData *mData0;
+	AnalyzerChannelData *mData1;
+	AnalyzerChannelData *mData2;
+	AnalyzerChannelData *mData3;
 };
 
 extern "C" ANALYZER_EXPORT const char* __cdecl GetAnalyzerName();

@@ -1,74 +1,74 @@
 #include "SDMMCHelpers.h"
 
 static struct MMCResponse responses[64] = {
-	/*  0 */ {MMC_RSP_NONE,     0,   0, false},
-	/*  1 */ {MMC_RSP_R3,      32,   5, false},
-	/*  2 */ {MMC_RSP_R2_CID, 128,   5, false},
-	/*  3 */ {MMC_RSP_R1,      32,  64, false},
-	/*  4 */ {MMC_RSP_NONE,     0,   0, false},
-	/*  5 */ {MMC_RSP_R1,      32,  64, true},
-	/*  6 */ {MMC_RSP_R1,      32,  64, true},
-	/*  7 */ {MMC_RSP_R1,      32,  64, true},
-	/*  8 */ {MMC_RSP_R1,      32,  64, false},
-	/*  9 */ {MMC_RSP_R2_CSD, 128,  64, false},
-	/* 10 */ {MMC_RSP_R2_CID, 128,  64, false},
-	/* 11 */ {MMC_RSP_R1,      32,  64, false},
-	/* 12 */ {MMC_RSP_R1,      32,  64, false},
-	/* 13 */ {MMC_RSP_R1,      32,  64, false},
-	/* 14 */ {MMC_RSP_R1,      32,  64, false},
-	/* 15 */ {MMC_RSP_NONE,     0,   0, false},
-	/* 16 */ {MMC_RSP_R1,      32,  64, false},
-	/* 17 */ {MMC_RSP_R1,      32,  64, false},
-	/* 18 */ {MMC_RSP_R1,      32,  64, false},
-	/* 19 */ {MMC_RSP_R1,      32,  64, false},
-	/* 20 */ {MMC_RSP_R1,      32,  64, false},
-	/* 21 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 22 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 23 */ {MMC_RSP_R1,      32,  64, false},
-	/* 24 */ {MMC_RSP_R1,      32,  64, false},
-	/* 25 */ {MMC_RSP_R1,      32,  64, false},
-	/* 26 */ {MMC_RSP_R1,      32,  64, false},
-	/* 27 */ {MMC_RSP_R1,      32,  64, false},
-	/* 28 */ {MMC_RSP_R1,      32,  64, true},
-	/* 29 */ {MMC_RSP_R1,      32,  64, true},
-	/* 30 */ {MMC_RSP_R1,      32,  64, false},
-	/* 31 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 32 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 33 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 34 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 35 */ {MMC_RSP_R1,      32,  64, false},
-	/* 36 */ {MMC_RSP_R1,      32,  64, false},
-	/* 37 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 38 */ {MMC_RSP_R1,      32,  64, true},
-	/* 39 */ {MMC_RSP_R4,      32,  64, false},
-	/* 40 */ {MMC_RSP_R5,      32,  64, false},
-	/* 41 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 42 */ {MMC_RSP_R1,      32,  64, false},
-	/* 43 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 44 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 45 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 46 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 47 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 48 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 49 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 50 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 51 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 52 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 53 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 54 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 55 */ {MMC_RSP_R1,      32,  64, false},
-	/* 56 */ {MMC_RSP_R1,      32,  64, false},
-	/* 57 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 58 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 59 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 60 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 61 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 62 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
-	/* 63 */ {MMC_RSP_NONE,     0,   0, false}, /* reserved */
+	/*  0 */ {MMC_RSP_NONE,     0,   0, false, false},
+	/*  1 */ {MMC_RSP_R3,      32,   5, false, false},
+	/*  2 */ {MMC_RSP_R2_CID, 128,   5, false, false},
+	/*  3 */ {MMC_RSP_R1,      32,  64, false, false},
+	/*  4 */ {MMC_RSP_NONE,     0,   0, false, false},
+	/*  5 */ {MMC_RSP_R1,      32,  64, true, false},
+	/*  6 */ {MMC_RSP_R1,      32,  64, true, false},
+	/*  7 */ {MMC_RSP_R1,      32,  64, true, false},
+	/*  8 */ {MMC_RSP_R1,      32,  64, false, false},
+	/*  9 */ {MMC_RSP_R2_CSD, 128,  64, false, false},
+	/* 10 */ {MMC_RSP_R2_CID, 128,  64, false, false},
+	/* 11 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 12 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 13 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 14 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 15 */ {MMC_RSP_NONE,     0,   0, false, false},
+	/* 16 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 17 */ {MMC_RSP_R1,      32,  64, false, true},
+	/* 18 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 19 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 20 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 21 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 22 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 23 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 24 */ {MMC_RSP_R1,      32,  64, false, true},
+	/* 25 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 26 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 27 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 28 */ {MMC_RSP_R1,      32,  64, true, false},
+	/* 29 */ {MMC_RSP_R1,      32,  64, true, false},
+	/* 30 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 31 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 32 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 33 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 34 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 35 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 36 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 37 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 38 */ {MMC_RSP_R1,      32,  64, true, false},
+	/* 39 */ {MMC_RSP_R4,      32,  64, false, false},
+	/* 40 */ {MMC_RSP_R5,      32,  64, false, false},
+	/* 41 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 42 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 43 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 44 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 45 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 46 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 47 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 48 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 49 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 50 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 51 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 52 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 53 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 54 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 55 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 56 */ {MMC_RSP_R1,      32,  64, false, false},
+	/* 57 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 58 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 59 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 60 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 61 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 62 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
+	/* 63 */ {MMC_RSP_NONE,     0,   0, false, false}, /* reserved */
 };
 
 static struct MMCResponse invalid_response = {
-	MMC_RSP_NONE,  0,   0, false
+	MMC_RSP_NONE,  0,   0, false, false
 };
 
 struct MMCResponse SDMMCHelpers::MMCCommandResponse(unsigned int index)

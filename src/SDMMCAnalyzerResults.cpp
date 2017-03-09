@@ -88,6 +88,8 @@ void SDMMCAnalyzerResults::GenerateBubbleText(U64 frame_index, Channel& channel,
 
 	switch (frame.mType) {
 	case FRAMETYPE_HEADER:
+		if (channel != mSettings->mCommandChannel)
+			break;
 		if (frame.mData1 == 1)
 			AddResultString("Host sending");
 		else
@@ -96,6 +98,8 @@ void SDMMCAnalyzerResults::GenerateBubbleText(U64 frame_index, Channel& channel,
 
 case FRAMETYPE_COMMAND:
 	{
+		if (channel != mSettings->mCommandChannel)
+			break;
 		char str_cmd[33];
 		char str_arg[33];
 		const char *str_desc;
@@ -310,6 +314,8 @@ case FRAMETYPE_COMMAND:
 
 	case FRAMETYPE_RESPONSE:
 	{
+		if (channel != mSettings->mCommandChannel)
+			break;
 		char str_32[33];
 
 		switch (frame.mFlags) {
@@ -481,12 +487,37 @@ case FRAMETYPE_COMMAND:
 
 	case FRAMETYPE_CRC:
 	{
+		if (channel != mSettings->mCommandChannel)
+			break;
 		char str_crc[8];
 
 		AnalyzerHelpers::GetNumberString(frame.mData1, Hexadecimal, 7, str_crc, sizeof(str_crc));
 
 		AddResultString("CRC");
 		AddResultString("CRC=", str_crc);
+		break;
+	}
+
+	case FRAMETYPE_DATA_CONTENTS:
+	{
+		if (channel != mSettings->mDataChannel0)
+			break;
+
+		char str_crc[8];
+		AnalyzerHelpers::GetNumberString(frame.mData1, Hexadecimal, 8,
+				str_crc, sizeof(str_crc));
+		AddResultString(str_crc);
+		break;
+	}
+	case FRAMETYPE_DATA_CRC:
+	{
+		if (channel != mSettings->mDataChannel0)
+			break;
+
+		char str_crc[8];
+		AnalyzerHelpers::GetNumberString(frame.mData1, Hexadecimal, 8,
+				str_crc, sizeof(str_crc));
+		AddResultString(str_crc);
 		break;
 	}
 
@@ -753,6 +784,36 @@ void SDMMCAnalyzerResults::GenerateExportFile(const char* file, DisplayBase disp
 			break;
 		}
 
+		case FRAMETYPE_DATA_CONTENTS:
+		{
+			char str_byte[5];
+			AnalyzerHelpers::GetNumberString(frame.mData1,
+					Hexadecimal, 8, str_byte,
+					sizeof(str_byte));
+			file_stream << "DATA_BYTE, " << str_byte << std::endl;
+			break;
+		}
+		case FRAMETYPE_DATA_CRC:
+		{
+			break;
+			// XXX does not work correctly
+			char str_crc[20];
+			char str_byte8[20];
+			char str_byte16[20];
+			AnalyzerHelpers::GetNumberString(frame.mData1,
+					Hexadecimal, 8, str_byte8,
+					sizeof(str_byte8));
+			file_stream << "CRC8, " << str_byte8 << std::endl;
+			AnalyzerHelpers::GetNumberString(frame.mData1,
+					Hexadecimal, 16, str_byte16,
+					sizeof(str_byte16));
+			file_stream << "CRC16, " << str_byte16 << std::endl;
+			AnalyzerHelpers::GetNumberString(frame.mData1,
+					Hexadecimal, 64, str_crc,
+					sizeof(str_crc));
+			file_stream << "DATA_CRC, " << str_crc << std::endl;
+			break;
+		}
 		default:
 			file_stream << "error";
 		}
