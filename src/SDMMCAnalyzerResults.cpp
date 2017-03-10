@@ -30,7 +30,7 @@ static const char* cmd_abbrev_from_number(unsigned int cmd_number)
 		case 5: return "[reserved for SDIO]";
 		case 6: return "SWITCH_FUNC";
 		case 7: return "SELECT/DESELECT_CARD";
-		case 8: return "SEND_IF_COND";
+		case 8: return "SEND_EXT_CSD";
 		case 9: return "SEND_CSD";
 		case 10: return "SEND_CID";
 		case 11: return "VOLTAGE_SWITCH";
