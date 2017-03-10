@@ -47,6 +47,7 @@ void SDMMCAnalyzer::WorkerThread()
 
 		ReportProgress(mClock->GetSampleNumber());
 		CheckIfThreadShouldExit();
+		AdvanceToNextCommand();
 		AdvanceToNextClock();
 
 		cmdindex = TryReadCommand();
@@ -102,6 +103,20 @@ void SDMMCAnalyzer::AdvanceToNextClock()
 	mData5->AdvanceToAbsPosition(mClock->GetSampleNumber());
 	mData6->AdvanceToAbsPosition(mClock->GetSampleNumber());
 	mData7->AdvanceToAbsPosition(mClock->GetSampleNumber());
+}
+
+void SDMMCAnalyzer::AdvanceToNextCommand() {
+	mCommand->AdvanceToNextEdge();
+	mClock->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData0->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData1->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData2->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData3->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData4->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData5->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData6->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	mData7->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	return;
 }
 
 int SDMMCAnalyzer::TryReadCommand()

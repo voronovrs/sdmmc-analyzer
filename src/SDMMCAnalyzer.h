@@ -27,6 +27,7 @@ public:
 
 protected:
 	void AdvanceToNextClock();
+	void AdvanceToNextCommand();
 	int TryReadCommand();
 	int WaitForAndReadMMCResponse(struct MMCResponse response);
 	void ReadResponseBit(ResponseReadState *state, struct Frame *respFrame);
