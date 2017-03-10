@@ -25,6 +25,14 @@ SDMMCAnalyzerSettings::SDMMCAnalyzerSettings()
 	mProtocolInterface->AddNumber(PROTOCOL_SD,	"SD",  "SD protocol");
 	mProtocolInterface->SetNumber(mProtocol);
 
+	mBusWidthInterface.reset(new AnalyzerSettingInterfaceNumberList());
+	mBusWidthInterface->SetTitleAndTooltip("Bus Width", "Bus Width");
+	mBusWidthInterface->AddNumber(BUS_WIDTH_0, "0 (no data lines)", "0 (no data lines)");
+	mBusWidthInterface->AddNumber(BUS_WIDTH_1,	"1 (D0 only)",  "1 (D0 only)");
+	mBusWidthInterface->AddNumber(BUS_WIDTH_4,	"4 (D0-D3 only)",  "4 (D0-D3 only)");
+	mBusWidthInterface->AddNumber(BUS_WIDTH_8,	"8 (D0-D8)",  "8 (D0-D8)");
+	mBusWidthInterface->SetNumber(mBusWidth);
+
 	mDataChannelInterface0.reset(new AnalyzerSettingInterfaceChannel());
 	mDataChannelInterface0->SetTitleAndTooltip("Data channel 0", "Data channel 0 (D0)");
 	mDataChannelInterface0->SetChannel(mDataChannel0);
@@ -54,6 +62,7 @@ SDMMCAnalyzerSettings::SDMMCAnalyzerSettings()
 	AddInterface(mClockChannelInterface.get());
 	AddInterface(mCommandChannelInterface.get());
 	AddInterface(mProtocolInterface.get());
+	AddInterface(mBusWidthInterface.get());
 	AddInterface(mSampleEdgeInterface.get());
 	AddInterface(mDataChannelInterface0.get());
 	AddInterface(mDataChannelInterface1.get());
@@ -97,6 +106,7 @@ bool SDMMCAnalyzerSettings::SetSettingsFromInterfaces()
 	mDataChannel2 = data2;
 	mDataChannel3 = data3;
 	mProtocol = SDMMCProtocol((U32)mProtocolInterface->GetNumber());
+	mBusWidth = SDMMCBusWidth((U32)mBusWidthInterface->GetNumber());
 	mSampleEdge = SDMMCSampleEdge((U32)mSampleEdgeInterface->GetNumber());
 
 	ClearChannels();
@@ -119,6 +129,7 @@ void SDMMCAnalyzerSettings::UpdateInterfacesFromSettings()
 	mDataChannelInterface2->SetChannel(mDataChannel2);
 	mDataChannelInterface3->SetChannel(mDataChannel3);
 	mProtocolInterface->SetNumber(mProtocol);
+	mBusWidthInterface->SetNumber(mBusWidth);
 	mSampleEdgeInterface->SetNumber(mSampleEdge);
 }
 
@@ -136,6 +147,7 @@ void SDMMCAnalyzerSettings::LoadSettings(const char *settings)
 	archive >> mDataChannel2;
 	archive >> mDataChannel3;
 	archive >> tmp; mProtocol = SDMMCProtocol(tmp);
+	archive >> tmp; mBusWidth = SDMMCBusWidth(tmp);
 	archive >> tmp; mSampleEdge = SDMMCSampleEdge(tmp);
 
 	ClearChannels();
@@ -160,6 +172,7 @@ const char *SDMMCAnalyzerSettings::SaveSettings()
 	archive << mDataChannel2;
 	archive << mDataChannel3;
 	archive << mProtocol;
+	archive << mBusWidth;
 	archive << mSampleEdge;
 
 	return SetReturnString(archive.GetString());

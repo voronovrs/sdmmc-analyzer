@@ -9,6 +9,13 @@ enum SDMMCProtocol {
 	PROTOCOL_SD,
 };
 
+enum SDMMCBusWidth {
+    BUS_WIDTH_0,
+    BUS_WIDTH_1,
+    BUS_WIDTH_4,
+    BUS_WIDTH_8
+};
+
 enum SDMMCSampleEdge {
 	SAMPLE_EDGE_RISING,
 	SAMPLE_EDGE_FALLING
@@ -33,6 +40,7 @@ public:
 	Channel mDataChannel2;
 	Channel mDataChannel3;
 	enum SDMMCProtocol mProtocol;
+	enum SDMMCBusWidth mBusWidth;
 	enum SDMMCSampleEdge mSampleEdge;
 
 protected:
@@ -43,6 +51,7 @@ protected:
 	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface2;
 	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface3;
 	std::auto_ptr<AnalyzerSettingInterfaceNumberList> mProtocolInterface;
+	std::auto_ptr<AnalyzerSettingInterfaceNumberList> mBusWidthInterface;
 	std::auto_ptr<AnalyzerSettingInterfaceNumberList> mSampleEdgeInterface;
 };
 
