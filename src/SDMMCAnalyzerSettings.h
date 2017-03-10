@@ -39,6 +39,10 @@ public:
 	Channel mDataChannel1;
 	Channel mDataChannel2;
 	Channel mDataChannel3;
+	Channel mDataChannel4;
+	Channel mDataChannel5;
+	Channel mDataChannel6;
+	Channel mDataChannel7;
 	enum SDMMCProtocol mProtocol;
 	enum SDMMCBusWidth mBusWidth;
 	enum SDMMCSampleEdge mSampleEdge;
@@ -50,6 +54,10 @@ protected:
 	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface1;
 	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface2;
 	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface3;
+	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface4;
+	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface5;
+	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface6;
+	std::auto_ptr<AnalyzerSettingInterfaceChannel> mDataChannelInterface7;
 	std::auto_ptr<AnalyzerSettingInterfaceNumberList> mProtocolInterface;
 	std::auto_ptr<AnalyzerSettingInterfaceNumberList> mBusWidthInterface;
 	std::auto_ptr<AnalyzerSettingInterfaceNumberList> mSampleEdgeInterface;

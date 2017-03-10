@@ -37,6 +37,10 @@ void SDMMCAnalyzer::WorkerThread()
 	mData1 = GetAnalyzerChannelData(mSettings->mDataChannel1);
 	mData2 = GetAnalyzerChannelData(mSettings->mDataChannel2);
 	mData3 = GetAnalyzerChannelData(mSettings->mDataChannel3);
+	mData4 = GetAnalyzerChannelData(mSettings->mDataChannel4);
+	mData5 = GetAnalyzerChannelData(mSettings->mDataChannel5);
+	mData6 = GetAnalyzerChannelData(mSettings->mDataChannel6);
+	mData7 = GetAnalyzerChannelData(mSettings->mDataChannel7);
 
 	while (true) {
 		int cmdindex;
@@ -94,6 +98,10 @@ void SDMMCAnalyzer::AdvanceToNextClock()
 	mData1->AdvanceToAbsPosition(mClock->GetSampleNumber());
 	mData2->AdvanceToAbsPosition(mClock->GetSampleNumber());
 	mData3->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData4->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData5->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData6->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	mData7->AdvanceToAbsPosition(mClock->GetSampleNumber());
 }
 
 int SDMMCAnalyzer::TryReadCommand()
@@ -186,7 +194,7 @@ int SDMMCAnalyzer::WaitForAndReadMMCResponse(struct MMCResponse response)
 	// Start ReadResponse & ReadData state machine
 	ResponseReadState respState = {RESP_INIT, response.mType, 0, response.mBits, 0};
 	DataReadState dataState = {DATA_INIT, 0, 0};
-	if (!response.hasDataBlock) {
+	if (!response.hasDataBlock || mSettings->mBusWidth == BUS_WIDTH_0) {
 		dataState.phase = DATA_END;
 	}
 
@@ -292,10 +300,19 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 	switch(state->phase) {
 		case DATA_INIT:
 			if (mData0->GetBitState() == BIT_LOW) {
-				/* other data lines must be at 0, too */
-				if (mData1->GetBitState() != BIT_LOW ||
-						mData2->GetBitState() != BIT_LOW ||
-						mData3->GetBitState() != BIT_LOW) {
+				/* other data lines must be at 0, too
+				 * (depending on bus width (?)) */
+				if (    /* BusWidth=4 or 8 */
+						mSettings->mBusWidth != BUS_WIDTH_1 &&
+						(mData1->GetBitState() != BIT_LOW ||
+						 mData2->GetBitState() != BIT_LOW ||
+						 mData3->GetBitState() != BIT_LOW) ||
+						/* BusWidth=8 */
+						mSettings->mBusWidth == BUS_WIDTH_8 &&
+						(mData4->GetBitState() != BIT_LOW ||
+						 mData5->GetBitState() != BIT_LOW ||
+						 mData6->GetBitState() != BIT_LOW ||
+						 mData7->GetBitState() != BIT_LOW)) {
 					mResults->AddMarker(mClock->GetSampleNumber(),
 							AnalyzerResults::X, mSettings->mDataChannel0);
 					state->phase = DATA_ERROR;
@@ -307,24 +324,42 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			}
 			return;
 		case DATA_DATA:
-			if (state->data_cnt % 2 == 0) {
+			 /* Start frames if necessary*/
+			if (mSettings->mBusWidth == BUS_WIDTH_8 ||
+					(mSettings->mBusWidth == BUS_WIDTH_4 && state->data_cnt % 2 == 0) ||
+					(mSettings->mBusWidth == BUS_WIDTH_1 && state->data_cnt % 8 == 0)) {
 				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_DATA_CONTENTS;
 				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
 				frame->mData1 = 0;
 				frame->mData2 = 0;
 				frame->mFlags = 0;
 			}
-			frame->mData1 = (frame->mData1 << 1) | mData3->GetBitState();
-			frame->mData1 = (frame->mData1 << 1) | mData2->GetBitState();
-			frame->mData1 = (frame->mData1 << 1) | mData1->GetBitState();
+			/* Store data */
+			if (mSettings->mBusWidth == BUS_WIDTH_8) {
+				frame->mData1 = (frame->mData1 << 1) | mData7->GetBitState();
+				frame->mData1 = (frame->mData1 << 1) | mData6->GetBitState();
+				frame->mData1 = (frame->mData1 << 1) | mData5->GetBitState();
+				frame->mData1 = (frame->mData1 << 1) | mData4->GetBitState();
+			}
+			if (mSettings->mBusWidth == BUS_WIDTH_8 ||
+					mSettings->mBusWidth == BUS_WIDTH_4) {
+				frame->mData1 = (frame->mData1 << 1) | mData3->GetBitState();
+				frame->mData1 = (frame->mData1 << 1) | mData2->GetBitState();
+				frame->mData1 = (frame->mData1 << 1) | mData1->GetBitState();
+			}
 			frame->mData1 = (frame->mData1 << 1) | mData0->GetBitState();
-			if (state->data_cnt % 2 == 1) {
+			/* Commit results if necessary */
+			if (mSettings->mBusWidth == BUS_WIDTH_8 ||
+					(mSettings->mBusWidth == BUS_WIDTH_4 && state->data_cnt % 2 == 1) ||
+					(mSettings->mBusWidth == BUS_WIDTH_1 && state->data_cnt % 8 == 7)
+					) {
 				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
 				mResults->AddFrame(*frame);
 				mResults->CommitResults();
 			}
-			/* last data bit only */
+			/* last data bit only - change state */
 			if (state->data_cnt == 1023) {
+				/* FIXME do not used fixed block width */
 				state->phase = DATA_CRC;
 			}
 			state->data_cnt++;
@@ -339,9 +374,17 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			}
 			frame->mData1 <<= 1;
 			frame->mData1 |= (mData0->GetBitState());
-			frame->mData1 |= (mData1->GetBitState() << 16);
-			frame->mData1 |= (mData2->GetBitState() << 32);
-			frame->mData1 |= (mData3->GetBitState() << 48);
+			if (mSettings->mBusWidth != BUS_WIDTH_1) { /* BusWidth=4 or 8 */
+				frame->mData1 |= (mData1->GetBitState() << 16);
+				frame->mData1 |= (mData2->GetBitState() << 32);
+				frame->mData1 |= (mData3->GetBitState() << 48);
+			}
+			if (mSettings->mBusWidth == BUS_WIDTH_8) { /* BusWidth=8 */
+				frame->mData2 |= (mData4->GetBitState() << 16);
+				frame->mData2 |= (mData5->GetBitState() << 16);
+				frame->mData2 |= (mData6->GetBitState() << 32);
+				frame->mData2 |= (mData7->GetBitState() << 48);
+			}
 			if (state->crc_cnt == 15) {
 				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
 				mResults->AddFrame(*frame);
@@ -351,10 +394,18 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			state->crc_cnt++;
 			return;
 		case DATA_STOP:
-			if (mData0->GetBitState() == BIT_LOW ||
-					mData1->GetBitState() == BIT_LOW ||
-					mData2->GetBitState() == BIT_LOW ||
-					mData3->GetBitState() == BIT_LOW) {
+			if (    /* BusWidth=4 or 8 */
+					mSettings->mBusWidth != BUS_WIDTH_1 &&
+					(mData0->GetBitState() == BIT_LOW ||
+					 mData1->GetBitState() == BIT_LOW ||
+					 mData2->GetBitState() == BIT_LOW ||
+					 mData3->GetBitState() == BIT_LOW) ||
+					/* BusWidth=8 */
+					mSettings->mBusWidth == BUS_WIDTH_8 &&
+					(mData4->GetBitState() == BIT_LOW ||
+					 mData5->GetBitState() == BIT_LOW ||
+					 mData6->GetBitState() == BIT_LOW ||
+					 mData7->GetBitState() == BIT_LOW)) {
 				mResults->AddMarker(mClock->GetSampleNumber(),
 						AnalyzerResults::X, mSettings->mDataChannel0);
 				state->phase = DATA_ERROR;

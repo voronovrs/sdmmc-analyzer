@@ -45,6 +45,10 @@ protected:
 	AnalyzerChannelData *mData1;
 	AnalyzerChannelData *mData2;
 	AnalyzerChannelData *mData3;
+	AnalyzerChannelData *mData4;
+	AnalyzerChannelData *mData5;
+	AnalyzerChannelData *mData6;
+	AnalyzerChannelData *mData7;
 };
 
 extern "C" ANALYZER_EXPORT const char* __cdecl GetAnalyzerName();
