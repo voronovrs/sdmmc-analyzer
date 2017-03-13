@@ -3,14 +3,10 @@
 #include "SDMMCAnalyzerResults.h"
 #include "SDMMCHelpers.h"
 
-const char SDMMCAnalyzer::Name[] = "SDMMC";
-
 SDMMCAnalyzer::SDMMCAnalyzer()
-:	Analyzer(),
-	mSettings(new SDMMCAnalyzerSettings()),
-	mSimulationInitialized(false)
+:	mSimulationInitialized(false)
 {
-	SetAnalyzerSettings(mSettings.get());
+	SetAnalyzerSettings(&mSettings);
 }
 
 SDMMCAnalyzer::~SDMMCAnalyzer()
@@ -20,27 +16,26 @@ SDMMCAnalyzer::~SDMMCAnalyzer()
 
 const char* SDMMCAnalyzer::GetAnalyzerName() const
 {
-	return Name;
+	return ::GetAnalyzerName();
+}
+
+const char* GetAnalyzerName()
+{
+	return "SDMMC";
 }
 
 void SDMMCAnalyzer::WorkerThread()
 {
-	mResults.reset(new SDMMCAnalyzerResults(this, mSettings.get()));
-	SetAnalyzerResults(mResults.get());
-
-	mResults->AddChannelBubblesWillAppearOn(mSettings->mCommandChannel);
-	mResults->AddChannelBubblesWillAppearOn(mSettings->mDataChannel0);
-
-	mClock = GetAnalyzerChannelData(mSettings->mClockChannel);
-	mCommand = GetAnalyzerChannelData(mSettings->mCommandChannel);
-	mData0 = GetAnalyzerChannelData(mSettings->mDataChannel0);
-	mData1 = GetAnalyzerChannelData(mSettings->mDataChannel1);
-	mData2 = GetAnalyzerChannelData(mSettings->mDataChannel2);
-	mData3 = GetAnalyzerChannelData(mSettings->mDataChannel3);
-	mData4 = GetAnalyzerChannelData(mSettings->mDataChannel4);
-	mData5 = GetAnalyzerChannelData(mSettings->mDataChannel5);
-	mData6 = GetAnalyzerChannelData(mSettings->mDataChannel6);
-	mData7 = GetAnalyzerChannelData(mSettings->mDataChannel7);
+	mClock = GetAnalyzerChannelData(mSettings.mClockChannel);
+	mCommand = GetAnalyzerChannelData(mSettings.mCommandChannel);
+	mData0 = GetAnalyzerChannelData(mSettings.mDataChannel0);
+	mData1 = GetAnalyzerChannelData(mSettings.mDataChannel1);
+	mData2 = GetAnalyzerChannelData(mSettings.mDataChannel2);
+	mData3 = GetAnalyzerChannelData(mSettings.mDataChannel3);
+	mData4 = GetAnalyzerChannelData(mSettings.mDataChannel4);
+	mData5 = GetAnalyzerChannelData(mSettings.mDataChannel5);
+	mData6 = GetAnalyzerChannelData(mSettings.mDataChannel6);
+	mData7 = GetAnalyzerChannelData(mSettings.mDataChannel7);
 
 	while (true) {
 		int cmdindex;
@@ -56,7 +51,7 @@ void SDMMCAnalyzer::WorkerThread()
 			continue;
 		}
 
-		if (mSettings->mProtocol == PROTOCOL_MMC) {
+		if (mSettings.mProtocol == PROTOCOL_MMC) {
 			struct MMCResponse response = SDMMCHelpers::MMCCommandResponse(cmdindex);
 			if (response.mType != MMC_RSP_NONE)
 				WaitForAndReadMMCResponse(response);
@@ -74,7 +69,7 @@ bool SDMMCAnalyzer::NeedsRerun()
 U32 SDMMCAnalyzer::GenerateSimulationData(U64 newest_sample_requested, U32 sample_rate, SimulationChannelDescriptor** simulation_channels)
 {
 	if (!mSimulationInitialized) {
-	mDataGenerator.Initialize(GetSimulationSampleRate(), mSettings.get());
+	mDataGenerator.Initialize(GetSimulationSampleRate(), &mSettings);
 	mSimulationInitialized = true;
 	}
 
@@ -86,9 +81,20 @@ U32 SDMMCAnalyzer::GetMinimumSampleRateHz()
 	return 400000 * 4;
 }
 
+void SDMMCAnalyzer::SetupResults()
+{
+	mResults.reset(new SDMMCAnalyzerResults(this, &mSettings));
+	SetAnalyzerResults(mResults.get());
+
+	// set which channels will carry bubbles
+	mResults->AddChannelBubblesWillAppearOn(mSettings.mCommandChannel);
+	if (mSettings.mBusWidth != BUS_WIDTH_0)
+        mResults->AddChannelBubblesWillAppearOn(mSettings.mDataChannel0);
+}
+
 void SDMMCAnalyzer::AdvanceToNextClock()
 {
-	enum BitState search = mSettings->mSampleEdge == SAMPLE_EDGE_RISING ? BIT_HIGH : BIT_LOW;
+	enum BitState search = mSettings.mSampleEdge == SAMPLE_EDGE_RISING ? BIT_HIGH : BIT_LOW;
 
 	do {
 		mClock->AdvanceToNextEdge();
@@ -127,13 +133,13 @@ int SDMMCAnalyzer::TryReadCommand()
 	if (mCommand->GetBitState() != BIT_LOW)
 		return -1;
 
-	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Start, mSettings->mCommandChannel);
+	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Start, mSettings.mCommandChannel);
 	AdvanceToNextClock();
 
 	/* transfer bit */
 	if (mCommand->GetBitState() != BIT_HIGH) {
 		/* if host is not transferring this is no command */
-		mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::X, mSettings->mCommandChannel);
+		mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::X, mSettings.mCommandChannel);
 		return -1;
 	}
 	AdvanceToNextClock();
@@ -184,7 +190,7 @@ int SDMMCAnalyzer::TryReadCommand()
 	}
 
 	/* stop bit */
-	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Stop, mSettings->mCommandChannel);
+	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Stop, mSettings.mCommandChannel);
 
 	mResults->CommitResults();
 	ReportProgress(mClock->GetSampleNumber());
@@ -209,7 +215,7 @@ int SDMMCAnalyzer::WaitForAndReadMMCResponse(struct MMCResponse response)
 	// Start ReadResponse & ReadData state machine
 	ResponseReadState respState = {RESP_INIT, response.mType, 0, response.mBits, 0};
 	DataReadState dataState = {DATA_INIT, 0, 0};
-	if (!response.hasDataBlock || mSettings->mBusWidth == BUS_WIDTH_0) {
+	if (!response.hasDataBlock || mSettings.mBusWidth == BUS_WIDTH_0) {
 		dataState.phase = DATA_END;
 	}
 
@@ -230,14 +236,14 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 	switch(state->phase) {
 		case RESP_INIT:
 			mResults->AddMarker(mClock->GetSampleNumber(),
-					AnalyzerResults::Start, mSettings->mCommandChannel);
+					AnalyzerResults::Start, mSettings.mCommandChannel);
 			state->phase = RESP_READDIR;
 			return;
 		case RESP_READDIR:
 			if (mCommand->GetBitState() != BIT_LOW) {
 				/* if card is not transferring this is no response */
 				mResults->AddMarker(mClock->GetSampleNumber(),
-						AnalyzerResults::X, mSettings->mCommandChannel);
+						AnalyzerResults::X, mSettings.mCommandChannel);
 				state->phase = RESP_ERROR;
 			} else {
 				state->phase = RESP_IGNORED;
@@ -300,7 +306,7 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 			return;
 		case RESP_STOP:
 			/* stop bit */
-			mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Stop, mSettings->mCommandChannel);
+			mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Stop, mSettings.mCommandChannel);
 			state->phase = RESP_END;
 			return;
 		/* this method does not gets called for END and ERROR phases */
@@ -318,31 +324,31 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 				/* other data lines must be at 0, too
 				 * (depending on bus width (?)) */
 				if (    /* BusWidth=4 or 8 */
-						mSettings->mBusWidth != BUS_WIDTH_1 &&
+						mSettings.mBusWidth != BUS_WIDTH_1 &&
 						(mData1->GetBitState() != BIT_LOW ||
 						 mData2->GetBitState() != BIT_LOW ||
 						 mData3->GetBitState() != BIT_LOW) ||
 						/* BusWidth=8 */
-						mSettings->mBusWidth == BUS_WIDTH_8 &&
+						mSettings.mBusWidth == BUS_WIDTH_8 &&
 						(mData4->GetBitState() != BIT_LOW ||
 						 mData5->GetBitState() != BIT_LOW ||
 						 mData6->GetBitState() != BIT_LOW ||
 						 mData7->GetBitState() != BIT_LOW)) {
 					mResults->AddMarker(mClock->GetSampleNumber(),
-							AnalyzerResults::X, mSettings->mDataChannel0);
+							AnalyzerResults::X, mSettings.mDataChannel0);
 					state->phase = DATA_ERROR;
 				} else {
 					mResults->AddMarker(mClock->GetSampleNumber(),
-							AnalyzerResults::Start, mSettings->mDataChannel0);
+							AnalyzerResults::Start, mSettings.mDataChannel0);
 					state->phase = DATA_DATA;
 				}
 			}
 			return;
 		case DATA_DATA:
 			 /* Start frames if necessary*/
-			if (mSettings->mBusWidth == BUS_WIDTH_8 ||
-					(mSettings->mBusWidth == BUS_WIDTH_4 && state->data_cnt % 2 == 0) ||
-					(mSettings->mBusWidth == BUS_WIDTH_1 && state->data_cnt % 8 == 0)) {
+			if (mSettings.mBusWidth == BUS_WIDTH_8 ||
+					(mSettings.mBusWidth == BUS_WIDTH_4 && state->data_cnt % 2 == 0) ||
+					(mSettings.mBusWidth == BUS_WIDTH_1 && state->data_cnt % 8 == 0)) {
 				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_DATA_CONTENTS;
 				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
 				frame->mData1 = 0;
@@ -350,23 +356,23 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 				frame->mFlags = 0;
 			}
 			/* Store data */
-			if (mSettings->mBusWidth == BUS_WIDTH_8) {
+			if (mSettings.mBusWidth == BUS_WIDTH_8) {
 				frame->mData1 = (frame->mData1 << 1) | mData7->GetBitState();
 				frame->mData1 = (frame->mData1 << 1) | mData6->GetBitState();
 				frame->mData1 = (frame->mData1 << 1) | mData5->GetBitState();
 				frame->mData1 = (frame->mData1 << 1) | mData4->GetBitState();
 			}
-			if (mSettings->mBusWidth == BUS_WIDTH_8 ||
-					mSettings->mBusWidth == BUS_WIDTH_4) {
+			if (mSettings.mBusWidth == BUS_WIDTH_8 ||
+					mSettings.mBusWidth == BUS_WIDTH_4) {
 				frame->mData1 = (frame->mData1 << 1) | mData3->GetBitState();
 				frame->mData1 = (frame->mData1 << 1) | mData2->GetBitState();
 				frame->mData1 = (frame->mData1 << 1) | mData1->GetBitState();
 			}
 			frame->mData1 = (frame->mData1 << 1) | mData0->GetBitState();
 			/* Commit results if necessary */
-			if (mSettings->mBusWidth == BUS_WIDTH_8 ||
-					(mSettings->mBusWidth == BUS_WIDTH_4 && state->data_cnt % 2 == 1) ||
-					(mSettings->mBusWidth == BUS_WIDTH_1 && state->data_cnt % 8 == 7)
+			if (mSettings.mBusWidth == BUS_WIDTH_8 ||
+					(mSettings.mBusWidth == BUS_WIDTH_4 && state->data_cnt % 2 == 1) ||
+					(mSettings.mBusWidth == BUS_WIDTH_1 && state->data_cnt % 8 == 7)
 					) {
 				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
 				mResults->AddFrame(*frame);
@@ -389,12 +395,12 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			}
 			frame->mData1 <<= 1;
 			frame->mData1 |= (mData0->GetBitState());
-			if (mSettings->mBusWidth != BUS_WIDTH_1) { /* BusWidth=4 or 8 */
+			if (mSettings.mBusWidth != BUS_WIDTH_1) { /* BusWidth=4 or 8 */
 				frame->mData1 |= (mData1->GetBitState() << 16);
 				frame->mData1 |= (mData2->GetBitState() << 32);
 				frame->mData1 |= (mData3->GetBitState() << 48);
 			}
-			if (mSettings->mBusWidth == BUS_WIDTH_8) { /* BusWidth=8 */
+			if (mSettings.mBusWidth == BUS_WIDTH_8) { /* BusWidth=8 */
 				frame->mData2 |= (mData4->GetBitState() << 16);
 				frame->mData2 |= (mData5->GetBitState() << 16);
 				frame->mData2 |= (mData6->GetBitState() << 32);
@@ -410,23 +416,23 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			return;
 		case DATA_STOP:
 			if (    /* BusWidth=4 or 8 */
-					mSettings->mBusWidth != BUS_WIDTH_1 &&
+					mSettings.mBusWidth != BUS_WIDTH_1 &&
 					(mData0->GetBitState() == BIT_LOW ||
 					 mData1->GetBitState() == BIT_LOW ||
 					 mData2->GetBitState() == BIT_LOW ||
 					 mData3->GetBitState() == BIT_LOW) ||
 					/* BusWidth=8 */
-					mSettings->mBusWidth == BUS_WIDTH_8 &&
+					mSettings.mBusWidth == BUS_WIDTH_8 &&
 					(mData4->GetBitState() == BIT_LOW ||
 					 mData5->GetBitState() == BIT_LOW ||
 					 mData6->GetBitState() == BIT_LOW ||
 					 mData7->GetBitState() == BIT_LOW)) {
 				mResults->AddMarker(mClock->GetSampleNumber(),
-						AnalyzerResults::X, mSettings->mDataChannel0);
+						AnalyzerResults::X, mSettings.mDataChannel0);
 				state->phase = DATA_ERROR;
 			} else {
 				mResults->AddMarker(mClock->GetSampleNumber(),
-						AnalyzerResults::Stop, mSettings->mDataChannel0);
+						AnalyzerResults::Stop, mSettings.mDataChannel0);
 				state->phase = DATA_END;
 			}
 			return;
@@ -439,11 +445,6 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 /*
  * loader hooks
  */
-
-const char* GetAnalyzerName()
-{
-	return SDMMCAnalyzer::Name;
-}
 
 Analyzer* CreateAnalyzer()
 {

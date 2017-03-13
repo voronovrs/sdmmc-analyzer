@@ -8,11 +8,8 @@
 #include "SDMMCAnalyzer.h"
 #include "SDMMCHelpers.h"
 
-class ANALYZER_EXPORT SDMMCAnalyzer : public Analyzer
+class SDMMCAnalyzer : public Analyzer2
 {
-public:
-	static const char Name[];
-
 public:
 	SDMMCAnalyzer();
 	virtual ~SDMMCAnalyzer();
@@ -24,6 +21,7 @@ public:
 
 	virtual U32 GenerateSimulationData( U64 newest_sample_requested, U32 sample_rate, SimulationChannelDescriptor** simulation_channels );
 	virtual U32 GetMinimumSampleRateHz();
+	virtual void SetupResults();
 
 protected:
 	void AdvanceToNextClock();
@@ -34,7 +32,7 @@ protected:
 	void ReadDataBit(DataReadState *state, struct Frame *dataFrame);
 
 protected:
-	std::auto_ptr<SDMMCAnalyzerSettings> mSettings;
+	SDMMCAnalyzerSettings mSettings;
 	std::auto_ptr<SDMMCAnalyzerResults> mResults;
 
 	SDMMCSimulationDataGenerator mDataGenerator;

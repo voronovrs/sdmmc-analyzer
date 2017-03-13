@@ -8,8 +8,7 @@
 #include <fstream>
 
 SDMMCAnalyzerResults::SDMMCAnalyzerResults(SDMMCAnalyzer* analyzer, SDMMCAnalyzerSettings* settings)
-:	AnalyzerResults(),
-	mSettings(settings),
+:	mSettings(settings),
 	mAnalyzer(analyzer)
 {
 }
@@ -833,8 +832,17 @@ void SDMMCAnalyzerResults::GenerateExportFile(const char* file, DisplayBase disp
 
 void SDMMCAnalyzerResults::GenerateFrameTabularText(U64 frame_index, DisplayBase display_base)
 {
-	ClearResultStrings();
-	AddResultString("not supported");
+	ClearTabularText();
+	Frame frame = GetFrame(frame_index);
+	if (frame.mType != FRAMETYPE_COMMAND)
+		return;
+	char str_cmd[33];
+	char str_arg[33];
+	const char *str_desc;
+	AnalyzerHelpers::GetNumberString(frame.mData1, Decimal, 6, str_cmd, sizeof(str_cmd));
+	AnalyzerHelpers::GetNumberString(frame.mData2, display_base, 32, str_arg, sizeof(str_arg));
+	str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2);
+	AddTabularText("CMD", str_cmd, ", arg=", str_arg, " ", str_desc);
 }
 
 void SDMMCAnalyzerResults::GeneratePacketTabularText(U64 packet_id, DisplayBase display_base)
