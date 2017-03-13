@@ -101,27 +101,39 @@ void SDMMCAnalyzer::AdvanceToNextClock()
 	} while (mClock->GetBitState() != search);
 
 	mCommand->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData0->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData1->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData2->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData3->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData4->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData5->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData6->AdvanceToAbsPosition(mClock->GetSampleNumber());
-	mData7->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	if (mSettings.mBusWidth != BUS_WIDTH_0)
+		mData0->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	if (mSettings.mBusWidth == BUS_WIDTH_4 ||
+			mSettings.mBusWidth == BUS_WIDTH_8) {
+		mData1->AdvanceToAbsPosition(mClock->GetSampleNumber());
+		mData2->AdvanceToAbsPosition(mClock->GetSampleNumber());
+		mData3->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	}
+	if (mSettings.mBusWidth == BUS_WIDTH_8) {
+		mData4->AdvanceToAbsPosition(mClock->GetSampleNumber());
+		mData5->AdvanceToAbsPosition(mClock->GetSampleNumber());
+		mData6->AdvanceToAbsPosition(mClock->GetSampleNumber());
+		mData7->AdvanceToAbsPosition(mClock->GetSampleNumber());
+	}
 }
 
 void SDMMCAnalyzer::AdvanceToNextCommand() {
 	mCommand->AdvanceToNextEdge();
 	mClock->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData0->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData1->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData2->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData3->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData4->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData5->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData6->AdvanceToAbsPosition(mCommand->GetSampleNumber());
-	mData7->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	if (mSettings.mBusWidth != BUS_WIDTH_0)
+		mData0->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	if (mSettings.mBusWidth == BUS_WIDTH_4 ||
+			mSettings.mBusWidth == BUS_WIDTH_8) {
+		mData1->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+		mData2->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+		mData3->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	}
+	if (mSettings.mBusWidth == BUS_WIDTH_8) {
+		mData4->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+		mData5->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+		mData6->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+		mData7->AdvanceToAbsPosition(mCommand->GetSampleNumber());
+	}
 	return;
 }
 
