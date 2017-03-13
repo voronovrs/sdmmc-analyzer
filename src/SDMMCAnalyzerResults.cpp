@@ -520,6 +520,21 @@ case FRAMETYPE_COMMAND:
 		break;
 	}
 
+	case FRAMETYPE_DATA_CRC_CHECK:
+	{
+		if (channel != mSettings->mDataChannel0)
+			break;
+		if (frame.mData1 == 5) {
+			AddResultString("BAD CRC");
+		} else {
+			if (frame.mData1 == 2) {
+				AddResultString("GOOD CRC");
+			} else {
+				AddResultString("UNEXPECTED CRC");
+			}
+		}
+		break;
+	}
 	default:
 		AddResultString("error");
 	}

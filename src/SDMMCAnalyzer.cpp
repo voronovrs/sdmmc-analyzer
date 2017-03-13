@@ -38,26 +38,36 @@ void SDMMCAnalyzer::WorkerThread()
 	mData7 = GetAnalyzerChannelData(mSettings.mDataChannel7);
 
 	while (true) {
-		int cmdindex;
 
 		ReportProgress(mClock->GetSampleNumber());
 		CheckIfThreadShouldExit();
+		// Skip to next command
 		AdvanceToNextCommand();
 		AdvanceToNextClock();
 
-		cmdindex = TryReadCommand();
-		if (cmdindex < 0) {
-			/* continue if parsing the command failed */
-			continue;
-		}
+		// Frame objects used by state machine functions - can't be created
+		// there (lifetime)
+		Frame respFrame;
+		Frame dataFrame;
 
-		if (mSettings.mProtocol == PROTOCOL_MMC) {
-			struct MMCResponse response = SDMMCHelpers::MMCCommandResponse(cmdindex);
-			if (response.mType != MMC_RSP_NONE)
-				WaitForAndReadMMCResponse(response);
-		} else {
-			/* FIXME: implement SD response handling */
+		// Init CMD & DATA state machines
+		CommandReadState cmdState = {
+			CMD_INIT, 0, 0, 0, // CMD counters & state
+			// RESP counters & state (will be set after CMD has been read)
+			MMC_RSP_NONE, 0, 0, 0, 0, 0, 0};
+		DataReadState dataState = {DATA_NOTSTARTED, 0, 0, 0, 0, false};
+
+		while (cmdState.phase != CMD_ERROR && dataState.phase != DATA_ERROR &&
+				cmdState.phase != CMD_INTERRUPT &&
+				!(cmdState.phase == CMD_END &&
+					(dataState.phase == DATA_END ||
+					 dataState.phase == DATA_NOTSTARTED))) {
+			// CMD state machine may start DATA state machine => ref needed
+			ReadCommandBit(&cmdState, &dataState, &respFrame);
+			ReadDataBit(&dataState, &dataFrame);
+			AdvanceToNextClock();
 		}
+		mResults->CommitResults();
 	}
 }
 
@@ -137,146 +147,132 @@ void SDMMCAnalyzer::AdvanceToNextCommand() {
 	return;
 }
 
-int SDMMCAnalyzer::TryReadCommand()
-{
-	int index;
-
-	/* check for start bit */
-	if (mCommand->GetBitState() != BIT_LOW)
-		return -1;
-
-	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Start, mSettings.mCommandChannel);
-	AdvanceToNextClock();
-
-	/* transfer bit */
-	if (mCommand->GetBitState() != BIT_HIGH) {
-		/* if host is not transferring this is no command */
-		mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::X, mSettings.mCommandChannel);
-		return -1;
-	}
-	AdvanceToNextClock();
-
-	/* command index and argument */
-	{
-		Frame frame;
-
-		frame.mStartingSampleInclusive = mClock->GetSampleNumber();
-		frame.mData1 = 0;
-		frame.mData2 = 0;
-		frame.mType = SDMMCAnalyzerResults::FRAMETYPE_COMMAND;
-
-		for (int i = 0; i < 6; i++) {
-			frame.mData1 = (frame.mData1 << 1) | mCommand->GetBitState();
-			AdvanceToNextClock();
-		}
-
-		for (int i = 0; i < 32; i++) {
-			frame.mData2 = (frame.mData2 << 1) | mCommand->GetBitState();
-			AdvanceToNextClock();
-		}
-
-		frame.mEndingSampleInclusive = mClock->GetSampleNumber() - 1;
-		mResults->AddFrame(frame);
-		mResults->CommitResults();
-
-		/* save index for returning */
-		index = (int)frame.mData1;
-	}
-
-	/* crc */
-	{
-		Frame frame;
-
-		frame.mStartingSampleInclusive = mClock->GetSampleNumber();
-		frame.mData1 = 0;
-		frame.mType = SDMMCAnalyzerResults::FRAMETYPE_CRC;
-
-		for (int i = 0; i < 7; i++) {
-			frame.mData1 = (frame.mData1 << 1) | mCommand->GetBitState();
-			AdvanceToNextClock();
-		}
-
-		frame.mEndingSampleInclusive = mClock->GetSampleNumber() - 1;
-		mResults->AddFrame(frame);
-		mResults->CommitResults();
-	}
-
-	/* stop bit */
-	mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Stop, mSettings.mCommandChannel);
-
-	mResults->CommitResults();
-	ReportProgress(mClock->GetSampleNumber());
-
-	return index;
-}
-
-int SDMMCAnalyzer::WaitForAndReadMMCResponse(struct MMCResponse response)
-{
-	int timeout = response.mTimeout + 3; // add some slack time
-
-	while (timeout-- >= 0 && mCommand->GetBitState() != BIT_LOW)
-		AdvanceToNextClock();
-
-	if (timeout < 0)
-		return -1;
-
-	// Frame objects used by state machine functions - can't be created there
-	// (lifetime)
-	Frame respFrame;
-	Frame dataFrame;
-	// Start ReadResponse & ReadData state machine
-	ResponseReadState respState = {RESP_INIT, response.mType, 0, response.mBits, 0};
-	DataReadState dataState = {DATA_INIT, 0, 0};
-	if (!response.hasDataBlock || mSettings.mBusWidth == BUS_WIDTH_0) {
-		dataState.phase = DATA_END;
-	}
-
-	while (respState.phase != RESP_ERROR && dataState.phase != DATA_ERROR &&
-			!(respState.phase == RESP_END && dataState.phase == DATA_END)) {
-		ReadResponseBit(&respState, &respFrame);
-		ReadDataBit(&dataState, &dataFrame);
-		AdvanceToNextClock();
-	}
-
-	mResults->CommitResults();
-	ReportProgress(mClock->GetSampleNumber());
-
-	return 1;
-}
-
-void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *frame) {
+void SDMMCAnalyzer::ReadCommandBit(CommandReadState *state, DataReadState
+		*dataState, struct Frame *frame) {
 	switch(state->phase) {
-		case RESP_INIT:
-			mResults->AddMarker(mClock->GetSampleNumber(),
-					AnalyzerResults::Start, mSettings.mCommandChannel);
-			state->phase = RESP_READDIR;
+		case CMD_INIT:
+			if (mCommand->GetBitState() == BIT_LOW) {
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::Start, mSettings.mCommandChannel);
+				state->phase = CMD_DIR;
+			}
 			return;
-		case RESP_READDIR:
+		case CMD_DIR:
+			if (mCommand->GetBitState() != BIT_HIGH) {
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::X, mSettings.mCommandChannel);
+				state->phase = CMD_ERROR;
+			} else {
+				state->phase = CMD_IDX;
+			}
+			return;
+		case CMD_IDX:
+			if (state->cmd_idx_cnt == 0) {
+				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
+				frame->mData1 = 0;
+				frame->mData2 = 0;
+				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_COMMAND;
+				frame->mFlags = 0;
+			}
+			frame->mData1 = (frame->mData1 << 1) | mCommand->GetBitState();
+			if (state->cmd_idx_cnt == 5)
+				state->phase = CMD_ARG;
+			state->cmd_idx_cnt++;
+			return;
+		case CMD_ARG:
+			frame->mData2 = (frame->mData2 << 1) | mCommand->GetBitState();
+			if (state->cmd_arg_cnt == 31) {
+				state->phase = CMD_CRC;
+				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
+				mResults->AddFrame(*frame);
+				mResults->CommitResults();
+				state->cmdindex = (int)frame->mData1;
+				dataState->cmdindex = (int)frame->mData1;
+			}
+			state->cmd_arg_cnt++;
+			return;
+		case CMD_CRC:
+			if (state->cmd_crc_cnt == 0) {
+				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
+				frame->mData1 = 0;
+				frame->mData2 = 0;
+				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_CRC;
+				frame->mFlags = 0;
+			}
+			frame->mData1 = (frame->mData1 << 1) | mCommand->GetBitState();
+			if (state->cmd_crc_cnt == 6) {
+				state->phase = CMD_STOP;
+				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
+				mResults->AddFrame(*frame);
+				mResults->CommitResults();
+			}
+			state->cmd_crc_cnt++;
+			return;
+		case CMD_STOP:
+			mResults->AddMarker(mClock->GetSampleNumber(),
+					AnalyzerResults::Stop, mSettings.mCommandChannel);
+			if (mSettings.mProtocol == PROTOCOL_MMC) {
+				struct MMCResponse response = SDMMCHelpers::MMCCommandResponse(state->cmdindex);
+				if (response.mType != MMC_RSP_NONE) {
+					state->phase = RESP_INIT;
+					// prepare RESP parsing
+					state->timeout = response.mTimeout + 3; // add some slack time
+					state->resp_data_bits = response.mBits;
+					state->responseType = response.mType;
+					if (response.hasDataBlock &&
+							mSettings.mBusWidth != BUS_WIDTH_0) {
+						// init DATA state machine
+						dataState->phase = DATA_INIT;
+						dataState->hasSeveralDataBlocks = response.hasSeveralDataBlocks;
+					}
+				} else {
+					state->phase = CMD_END;
+				}
+			} else {
+				/* FIXME: implement SD response handling */
+				state->phase = CMD_END;
+			}
+			return;
+		case RESP_INIT:
+			if (mCommand->GetBitState() != BIT_LOW) {
+				// Waiting for init
+				if (state->timeout == 0) {
+					state->phase = CMD_ERROR;
+					mResults->AddMarker(mClock->GetSampleNumber(),
+							AnalyzerResults::X, mSettings.mCommandChannel);
+				} else {
+					state->timeout--;
+				}
+			} else {
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::Start, mSettings.mCommandChannel);
+				state->phase = RESP_DIR;
+			}
+			return;
+		case RESP_DIR:
 			if (mCommand->GetBitState() != BIT_LOW) {
 				/* if card is not transferring this is no response */
 				mResults->AddMarker(mClock->GetSampleNumber(),
 						AnalyzerResults::X, mSettings.mCommandChannel);
-				state->phase = RESP_ERROR;
+				state->phase = CMD_ERROR;
 			} else {
 				state->phase = RESP_IGNORED;
 			}
 			return;
 		case RESP_IGNORED:
-			if (state->ignore_cnt == 0)
+			if (state->resp_ignore_cnt == 0) {
 				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
-			if (state->ignore_cnt == 5)
-				state->phase = RESP_DATA;
-			state->ignore_cnt++;
-			return;
-		case RESP_DATA:
-			/* first data bit only */
-			if (state->data_cnt == 0) {
 				frame->mData1 = 0;
 				frame->mData2 = 0;
 				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_RESPONSE;
 				frame->mFlags = state->responseType;
 			}
-			if (state->data_cnt < 64) {
+			if (state->resp_ignore_cnt == 5)
+				state->phase = RESP_DATA;
+			state->resp_ignore_cnt++;
+			return;
+		case RESP_DATA:
+			if (state->resp_data_cnt < 64) {
 				frame->mData1 = (frame->mData1 << 1) | mCommand->GetBitState();
 				/* bits 0 to 63 */
 			} else {
@@ -284,7 +280,7 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 				/* bits 64 to 127 */
 			}
 			/* last data bit only */
-			if (state->data_cnt == state->data_bits) {
+			if (state->resp_data_cnt == state->resp_data_bits) {
 				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
 				mResults->AddFrame(*frame);
 				mResults->CommitResults();
@@ -295,11 +291,11 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 					state->phase = RESP_STOP;
 				}
 			}
-			state->data_cnt++;
+			state->resp_data_cnt++;
 			return;
 		case RESP_CRC:
 			/* first crc bit only */
-			if (state->crc_cnt == 0) {
+			if (state->resp_crc_cnt == 0) {
 				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
 				frame->mData1 = 0;
 				frame->mData2 = 0;
@@ -308,22 +304,43 @@ void SDMMCAnalyzer::ReadResponseBit(ResponseReadState *state, struct Frame *fram
 			frame->mData1 = (frame->mData1 << 1) | mCommand->GetBitState();
 
 			/* last crc bit only */
-			if (state->crc_cnt == 6) {
+			if (state->resp_crc_cnt == 6) {
 				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
 				mResults->AddFrame(*frame);
 				mResults->CommitResults();
+				ReportProgress(frame->mEndingSampleInclusive);
 				state->phase = RESP_STOP;
 			}
-			state->crc_cnt++;
+			state->resp_crc_cnt++;
 			return;
 		case RESP_STOP:
 			/* stop bit */
 			mResults->AddMarker(mClock->GetSampleNumber(), AnalyzerResults::Stop, mSettings.mCommandChannel);
-			state->phase = RESP_END;
+			if (state->cmdindex == 12) {  // STOP_TRANSMISSION
+				state->phase = CMD_INTERRUPT;
+				return;
+			}
+			if (dataState->hasSeveralDataBlocks) {
+				// READ MULTIPLE BLOCK / WRITE MULTIPLE BLOCK: wait for another
+				// command while data is being transmitted
+				state->phase = CMD_INIT;
+				// Reset state
+				state->cmd_idx_cnt = 0;
+				state->cmd_arg_cnt = 0;
+				state->cmd_crc_cnt = 0;
+				state->responseType = MMC_RSP_NONE;
+				state->timeout = 0;
+				state->cmdindex = 0;
+				state->resp_data_bits = 0;
+				state->resp_ignore_cnt = 0;
+				state->resp_data_cnt = 0;
+			} else {
+				state->phase = CMD_END;
+			}
 			return;
 		/* this method does not gets called for END and ERROR phases */
-		case RESP_ERROR:
-		case RESP_END:
+		case CMD_ERROR:
+		case CMD_END:
 			return;
 	}
 
@@ -445,10 +462,67 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			} else {
 				mResults->AddMarker(mClock->GetSampleNumber(),
 						AnalyzerResults::Stop, mSettings.mDataChannel0);
+				if (state->cmdindex == 24 || state->cmdindex == 25) {
+					// Write commands
+					state->phase = DATA_CHECKCRC_INIT;
+				} else {
+					if (state->hasSeveralDataBlocks) {
+						// FIXME take CMD23 (SET BLOCK COUNT) into account, stop if
+						// necessary
+						state->data_cnt = 0;
+						state->crc_cnt = 0;
+						state->checkcrc_cnt = 0;
+						state->phase = DATA_INIT;
+					} else {
+						state->phase = DATA_END;
+					}
+				}
+			}
+		case DATA_CHECKCRC_INIT:
+			if (mData0->GetBitState() == BIT_LOW) {
+				state->phase = DATA_CHECKCRC_CRC;
+				mResults->AddMarker(mClock->GetSampleNumber(),
+						AnalyzerResults::Start, mSettings.mDataChannel0);
+			}
+			return;
+		case DATA_CHECKCRC_CRC:
+			// 010 -> OK; 101 -> NOK
+			if (state->checkcrc_cnt == 0) {
+				frame->mStartingSampleInclusive = mClock->GetSampleNumber();
+				frame->mData1 = 0;
+				frame->mData2 = 0;
+				frame->mType = SDMMCAnalyzerResults::FRAMETYPE_DATA_CRC_CHECK;
+			}
+			frame->mData1 = (frame->mData1 << 1) | mData0->GetBitState();
+			if (state->checkcrc_cnt == 2) {
+				state->phase = DATA_CHECKCRC_STOP;
+				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
+				mResults->AddFrame(*frame);
+				mResults->CommitResults();
+				ReportProgress(frame->mEndingSampleInclusive);
+			}
+			state->checkcrc_cnt++;
+			return;
+		case DATA_CHECKCRC_STOP:
+			mResults->AddMarker(mClock->GetSampleNumber(),
+					AnalyzerResults::Stop, mSettings.mDataChannel0);
+			state->phase = DATA_BUSY;
+			return;
+		case DATA_BUSY:
+			if (mData0->GetBitState() == BIT_HIGH) {
+				state->phase = DATA_BUSY_END;
+			}
+			return;
+		case DATA_BUSY_END:
+			if (state->hasSeveralDataBlocks) {
+				state->phase = DATA_INIT;
+			} else {
 				state->phase = DATA_END;
 			}
 			return;
-			/* this method does not gets called for END and ERROR phases */
+			/* this method does not gets called for NOTSTARTED, END and ERROR
+			 * phases */
+		case DATA_NOTSTARTED:
 		case DATA_ERROR:
 		case DATA_END:
 			return;
