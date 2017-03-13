@@ -9,7 +9,7 @@ static struct MMCResponse responses[64] = {
 	/*  5 */ {MMC_RSP_R1,      32,  64, true, false},
 	/*  6 */ {MMC_RSP_R1,      32,  64, true, false},
 	/*  7 */ {MMC_RSP_R1,      32,  64, true, false},
-	/*  8 */ {MMC_RSP_R1,      32,  64, false, false},
+	/*  8 */ {MMC_RSP_R1,      32,  64, false, true},
 	/*  9 */ {MMC_RSP_R2_CSD, 128,  64, false, false},
 	/* 10 */ {MMC_RSP_R2_CID, 128,  64, false, false},
 	/* 11 */ {MMC_RSP_R1,      32,  64, false, false},
