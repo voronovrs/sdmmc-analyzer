@@ -89,7 +89,7 @@ void SDMMCAnalyzer::SetupResults()
 	// set which channels will carry bubbles
 	mResults->AddChannelBubblesWillAppearOn(mSettings.mCommandChannel);
 	if (mSettings.mBusWidth != BUS_WIDTH_0)
-        mResults->AddChannelBubblesWillAppearOn(mSettings.mDataChannel0);
+		mResults->AddChannelBubblesWillAppearOn(mSettings.mDataChannel0);
 }
 
 void SDMMCAnalyzer::AdvanceToNextClock()
@@ -323,7 +323,7 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			if (mData0->GetBitState() == BIT_LOW) {
 				/* other data lines must be at 0, too
 				 * (depending on bus width (?)) */
-				if (    /* BusWidth=4 or 8 */
+				if (	/* BusWidth=4 or 8 */
 						mSettings.mBusWidth != BUS_WIDTH_1 &&
 						(mData1->GetBitState() != BIT_LOW ||
 						 mData2->GetBitState() != BIT_LOW ||
@@ -415,7 +415,7 @@ void SDMMCAnalyzer::ReadDataBit(DataReadState *state, struct Frame *frame) {
 			state->crc_cnt++;
 			return;
 		case DATA_STOP:
-			if (    /* BusWidth=4 or 8 */
+			if (	/* BusWidth=4 or 8 */
 					mSettings.mBusWidth != BUS_WIDTH_1 &&
 					(mData0->GetBitState() == BIT_LOW ||
 					 mData1->GetBitState() == BIT_LOW ||
