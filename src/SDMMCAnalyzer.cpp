@@ -281,6 +281,13 @@ void SDMMCAnalyzer::ReadCommandBit(CommandReadState *state, DataReadState
 			}
 			/* last data bit only */
 			if (state->resp_data_cnt == state->resp_data_bits) {
+				// observed: no data block following CMD8 R1 response,
+				// EXCEPTION_EVENT bit (6), RESERVED (4) and APP-specific (2)
+				// bits set - why?
+				if (state->responseType == MMC_RSP_R1 &&
+						((frame->mData1 & (1 << 6)) != 0)) {
+					dataState->phase = DATA_NOTSTARTED;
+				}
 				frame->mEndingSampleInclusive = mClock->GetSampleNumber();
 				mResults->AddFrame(*frame);
 				mResults->CommitResults();
