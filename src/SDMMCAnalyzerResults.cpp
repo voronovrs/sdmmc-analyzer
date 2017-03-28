@@ -383,8 +383,16 @@ case FRAMETYPE_COMMAND:
 					str_flags += " READY_FOR_DATA";
 			if (frame.mData1 & (1 << 7))
 					str_flags += " SWITCH_ERROR";
+			if (frame.mData1 & (1 << 6))
+					str_flags += " EXCEPTION_EVENT";
 			if (frame.mData1 & (1 << 5))
 					str_flags += " APP_CMD";
+			if (frame.mData1 & (1 << 4))
+					str_flags += " RESERVED";
+			if (frame.mData1 & (1 << 3) || frame.mData1 & (1 << 2))
+					str_flags += " APP_SPECIFIC";
+			if (frame.mData1 & (1 << 1) || frame.mData1 & 1)
+					str_flags += " MANUF_TEST";
 
 			if (str_flags.length() > 0)
 				AddResultString("R1, ", str_state, ", rsp=", str_32, str_flags.c_str());
