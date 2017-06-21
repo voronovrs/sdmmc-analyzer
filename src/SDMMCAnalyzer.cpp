@@ -294,6 +294,7 @@ void SDMMCAnalyzer::ReadCommandBit(CommandReadState *state, DataReadState
 				if (state->responseType != MMC_RSP_R2_CID &&
 						state->responseType != MMC_RSP_R2_CSD) {
 					state->phase = RESP_CRC;
+					state->resp_crc_cnt = 0;
 				} else {
 					state->phase = RESP_STOP;
 				}
