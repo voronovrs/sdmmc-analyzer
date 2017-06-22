@@ -1,5 +1,5 @@
-SD/MMC Analyzer for Logic
-=========================
+SD/MMC Analyzer for Saleae Logic
+================================
 
 ** this is a fork of the original project by dirker **
 
