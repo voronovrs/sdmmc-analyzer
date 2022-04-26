@@ -28,14 +28,20 @@ void SDMMCAnalyzer::WorkerThread()
 {
 	mClock = GetAnalyzerChannelData(mSettings.mClockChannel);
 	mCommand = GetAnalyzerChannelData(mSettings.mCommandChannel);
-	mData0 = GetAnalyzerChannelData(mSettings.mDataChannel0);
-	mData1 = GetAnalyzerChannelData(mSettings.mDataChannel1);
-	mData2 = GetAnalyzerChannelData(mSettings.mDataChannel2);
-	mData3 = GetAnalyzerChannelData(mSettings.mDataChannel3);
-	mData4 = GetAnalyzerChannelData(mSettings.mDataChannel4);
-	mData5 = GetAnalyzerChannelData(mSettings.mDataChannel5);
-	mData6 = GetAnalyzerChannelData(mSettings.mDataChannel6);
-	mData7 = GetAnalyzerChannelData(mSettings.mDataChannel7);
+	if (mSettings.mBusWidth != BUS_WIDTH_0)
+		mData0 = GetAnalyzerChannelData(mSettings.mDataChannel0);
+	if (mSettings.mBusWidth == BUS_WIDTH_4 ||
+			mSettings.mBusWidth == BUS_WIDTH_8) {
+		mData1 = GetAnalyzerChannelData(mSettings.mDataChannel1);
+		mData2 = GetAnalyzerChannelData(mSettings.mDataChannel2);
+		mData3 = GetAnalyzerChannelData(mSettings.mDataChannel3);
+	}
+	if (mSettings.mBusWidth == BUS_WIDTH_8) {
+		mData4 = GetAnalyzerChannelData(mSettings.mDataChannel4);
+		mData5 = GetAnalyzerChannelData(mSettings.mDataChannel5);
+		mData6 = GetAnalyzerChannelData(mSettings.mDataChannel6);
+		mData7 = GetAnalyzerChannelData(mSettings.mDataChannel7);
+	}
 
 	while (true) {
 
