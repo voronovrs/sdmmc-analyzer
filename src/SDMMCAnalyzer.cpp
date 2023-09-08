@@ -215,30 +215,27 @@ void SDMMCAnalyzer::ReadCommandBit(CommandReadState *state, DataReadState
 			state->cmd_crc_cnt++;
 			return;
 		case CMD_STOP:
+		{
 			mResults->AddMarker(mClock->GetSampleNumber(),
 					AnalyzerResults::Stop, mSettings.mCommandChannel);
-			if (mSettings.mProtocol == PROTOCOL_MMC) {
-				struct MMCResponse response = SDMMCHelpers::MMCCommandResponse(state->cmdindex);
-				if (response.mType != MMC_RSP_NONE) {
-					state->phase = RESP_INIT;
-					// prepare RESP parsing
-					state->timeout = response.mTimeout + 3; // add some slack time
-					state->resp_data_bits = response.mBits;
-					state->responseType = response.mType;
-					if (response.hasDataBlock &&
-							mSettings.mBusWidth != BUS_WIDTH_0) {
-						// init DATA state machine
-						dataState->phase = DATA_INIT;
-						dataState->hasSeveralDataBlocks = response.hasSeveralDataBlocks;
-					}
-				} else {
-					state->phase = CMD_END;
+			struct MMCResponse response = SDMMCHelpers::MMCCommandResponse(state->cmdindex, mSettings.mProtocol);
+			if (response.mType != MMC_RSP_NONE) {
+				state->phase = RESP_INIT;
+				// prepare RESP parsing
+				state->timeout = response.mTimeout + 3; // add some slack time
+				state->resp_data_bits = response.mBits;
+				state->responseType = response.mType;
+				if (response.hasDataBlock &&
+						mSettings.mBusWidth != BUS_WIDTH_0) {
+					// init DATA state machine
+					dataState->phase = DATA_INIT;
+					dataState->hasSeveralDataBlocks = response.hasSeveralDataBlocks;
 				}
 			} else {
-				/* FIXME: implement SD response handling */
 				state->phase = CMD_END;
 			}
 			return;
+		}
 		case RESP_INIT:
 			if (mCommand->GetBitState() != BIT_LOW) {
 				// Waiting for init

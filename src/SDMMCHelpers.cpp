@@ -67,16 +67,83 @@ static struct MMCResponse responses[64] = {
 	/* 63 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
 };
 
+static struct MMCResponse sd_responses[64] = {
+	/*  0 */ {MMC_RSP_NONE,     0,   0, false, false, false},
+	/*  1 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/*  2 */ {MMC_RSP_R2_CID, 128,   5, false, false, false},
+	/*  3 */ {SD_RSP_R6,       32,  64, false, false, false},
+	/*  4 */ {MMC_RSP_NONE,     0,   0, false, false, false},
+	/*  5 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/*  6 */ {MMC_RSP_R1,      32,  64, false, true, false},
+	/*  7 */ {MMC_RSP_R1,      32,  64, true, false, false},
+	/*  8 */ {SD_RSP_R7,       32,   5, false, false, false},
+	/*  9 */ {MMC_RSP_R2_CSD, 128,  64, false, false, false},
+	/* 10 */ {MMC_RSP_R2_CID, 128,  64, false, false, false},
+	/* 11 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 12 */ {MMC_RSP_R1,      32,  64, true, false, false},
+	/* 13 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 14 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 15 */ {MMC_RSP_NONE,     0,   0, false, false, false},
+	/* 16 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 17 */ {MMC_RSP_R1,      32,  64, false, true, false},
+	/* 18 */ {MMC_RSP_R1,      32,  64, false, true, true},
+	/* 19 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 20 */ {MMC_RSP_R1,      32,  64, true, false, false},
+	/* 21 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 22 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 23 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 24 */ {MMC_RSP_R1,      32,  64, false, true, false},
+	/* 25 */ {MMC_RSP_R1,      32,  64, false, true, true},
+	/* 26 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 27 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 28 */ {MMC_RSP_R1,      32,  64, true, false, false},
+	/* 29 */ {MMC_RSP_R1,      32,  64, true, false, false},
+	/* 30 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 31 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 32 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 33 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 34 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 35 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 36 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 37 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 38 */ {MMC_RSP_R1,      32,  64, true, false, false},
+	/* 39 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 40 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 41 */ {MMC_RSP_R3,      32,   64, false, false, false}, /* ACMD */
+	/* 42 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 43 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 44 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 45 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 46 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 47 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 48 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 49 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 50 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 51 */ {MMC_RSP_R1,      32,  64, false, true, false}, /* ACMD */
+	/* 52 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 53 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 54 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 55 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 56 */ {MMC_RSP_R1,      32,  64, false, false, false},
+	/* 57 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 58 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 59 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 60 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 61 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 62 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+	/* 63 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
+};
+
 static struct MMCResponse invalid_response = {
 	MMC_RSP_NONE,  0,   0, false, false
 };
 
-struct MMCResponse SDMMCHelpers::MMCCommandResponse(unsigned int index)
+struct MMCResponse SDMMCHelpers::MMCCommandResponse(unsigned int index, unsigned int protocol)
 {
 	if (index > 63)
 		return invalid_response;
 
-	return responses[index];
+	return (protocol == PROTOCOL_MMC) ? responses[index] : sd_responses[index];
 }
 
 /* According to eMMC 4.51 specs */
@@ -149,11 +216,81 @@ static struct MMCCommand commands[64] = {
 		"_ReservedMFR",			/* CMD63 */
 };
 
+/* According to SD Specifications Part 1 */
+static struct MMCCommand sd_commands[64] = {
+		"GO_IDLE_STATE",		/* CMD00	arg:00000000 => GO_IDLE_STATE
+											arg:F0F0F0F0 => GO_PRE_IDLE_STATE
+											arg:FFFFFFFA => BOOT_INITIATION */
+		"_Reserved",			/* CMD01 */
+		"ALL_SEND_CID",			/* CMD02 */
+		"SET_RELATIVE_ADDR",	/* CMD03 */
+		"SET_DSR",				/* CMD04 */
+		"_Reserved",			/* CMD05 */
+		"SWITCH",				/* CMD06 */
+		"SELECT/DESELECT_CARD",	/* CMD07 */
+		"SEND_IF_COND",			/* CMD08 */
+		"SEND_CSD",				/* CMD09 */
+		"SEND_CID",				/* CMD10 */
+		"VOLTAGE_SWITCH",		/* CMD11 */
+		"STOP_TRANSMISSION",	/* CMD12 */
+		"SEND_STATUS",			/* CMD13 */
+		"_Reserved",			/* CMD14 */
+		"GO_INACTIVE_STATE",	/* CMD15 */
+		"SET_BLOCKLEN",			/* CMD16 */
+		"READ_SINGLE_BLOCK",	/* CMD17 */
+		"READ_MULTIPLE_BLOCK",	/* CMD18 */
+		"SEND_TUNNING_BLOCK",	/* CMD19 */
+		"SPEED_CLASS_CONTROL",	/* CMD20 */
+		"_Reserved",			/* CMD21 */
+		"ADDRESS_EXTENSION",	/* CMD22 */
+		"SET_BLOCK_COUNT",		/* CMD23 */
+		"WRITE_BLOCK",			/* CMD24 */
+		"WRITE_MULTIPLE_BLOCK",	/* CMD25 */
+		"_Reserved",			/* CMD26 */
+		"PROGRAM_CSD",			/* CMD27 */
+		"SET_WRITE_PROT",		/* CMD28 */
+		"CLR_WRITE_PROT",		/* CMD29 */
+		"SEND_WRITE_PROT",		/* CMD30 */
+		"_Reserved",			/* CMD31 */
+		"ERASE_WR_BLK_START",	/* CMD32 */
+		"ERASE_WR_BLK_END",		/* CMD33 */
+		"_Reserved",			/* CMD34 */
+		"_Reserved",			/* CMD35 */
+		"_Reserved",			/* CMD36 */
+		"_Reserved",			/* CMD37 */
+		"ERASE",				/* CMD38 */
+		"_Reserved",			/* CMD39 */
+		"DPS_BLK_READ",			/* CMD40 */
+		"SD_SEND_OP_COND",		/* ACMD41 */
+		"LOCK_UNLOCK",			/* CMD42 */
+		"_Reserved",			/* CMD43 */
+		"_Reserved",			/* CMD44 */
+		"_Reserved",			/* CMD45 */
+		"_Reserved",			/* CMD46 */
+		"_Reserved",			/* CMD47 */
+		"_Reserved",			/* CMD48 */
+		"_Reserved",			/* CMD49 */
+		"_Reserved",			/* CMD50 */
+		"SEND_SCR",				/* CMD51 */
+		"_ReservedSDIO",		/* CMD52 */
+		"_ReservedSDIO",		/* CMD53 */
+		"_ReservedSDIO",		/* CMD54 */
+		"APP_CMD",				/* CMD55 */
+		"GEN_CMD",				/* CMD56 */
+		"_Reserved",			/* CMD57 */
+		"_Reserved",			/* CMD58 */
+		"_Reserved",			/* CMD59 */
+		"_ReservedMFR",			/* CMD60 */
+		"_ReservedMFR",			/* CMD61 */
+		"_ReservedMFR",			/* CMD62 */
+		"_ReservedMFR",			/* CMD63 */
+};
+
 static struct MMCCommand invalid_response_cmd = {
 	"_INVALID_"
 };
 
-const char * SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned int args)
+const char * SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned int args, unsigned int protocol)
 {
 	if (index > 63)
 		return invalid_response_cmd.desc;
@@ -169,7 +306,7 @@ const char * SDMMCHelpers::MMCCommandDescription(unsigned int index, unsigned in
 			return "_INVALID_CMD01_";
 	}
 
-	return commands[index].desc;
+	return (protocol == PROTOCOL_MMC) ? commands[index].desc : sd_commands[index].desc;
 }
 
 /*

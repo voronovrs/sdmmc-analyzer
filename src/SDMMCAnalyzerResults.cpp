@@ -17,69 +17,6 @@ SDMMCAnalyzerResults::~SDMMCAnalyzerResults()
 {
 }
 
-static const char* cmd_abbrev_from_number(unsigned int cmd_number)
-{
-	if (cmd_number >= 43 && cmd_number <= 47) return "[reserved]";
-	switch (cmd_number) {
-		case 0: return "GO_IDLE_STATE";
-		case 1: return "[reserved]";
-		case 2: return "ALL_SEND_CID";
-		case 3: return "SEND_RELATIVE_ADDR";
-		case 4: return "SET_DSR";
-		case 5: return "[reserved for SDIO]";
-		case 6: return "SWITCH_FUNC";
-		case 7: return "SELECT/DESELECT_CARD";
-		case 8: return "SEND_EXT_CSD";
-		case 9: return "SEND_CSD";
-		case 10: return "SEND_CID";
-		case 11: return "VOLTAGE_SWITCH";
-		case 12: return "STOP_TRANSMISSION";
-		case 13: return "SEND_STATUS";
-		case 14: return "[reserved]";
-		case 15: return "GO_INACTIVE_STATE";
-		case 16: return "SET_BLOCKLEN";
-		case 17: return "READ_SINGLE_BLOCK";
-		case 18: return "READ_MULTIPLE_BLOCK";
-		case 19: return "SEND_TUNING_BLOCK";
-		case 20: return "SPEED_CLASS_CONTROL";
-		case 21: return "[reserved for DPS]";
-		case 22: return "[reserved]";
-		case 23: return "SET_BLOCK_COUNT";
-		case 24: return "WRITE_BLOCK";
-		case 25: return "WRITE_MULTIPLE_BLOCK";
-		case 26: return "[reserved for manufacturer]";
-		case 27: return "PROGRAM_CSD";
-		case 28: return "SWT_WRITE_PROT";
-		case 29: return "CLR_WRITE_PROT";
-		case 30: return "SEND_WRITE_PROT";
-		case 31: return "[reserved]";
-		case 32: return "ERASE_WR_BLK_START";
-		case 33: return "ERASE_WR_BLK_END";
-		case 34: return "[function dependent]";
-		case 35: return "[function dependent]";
-		case 36: return "[function dependent]";
-		case 37: return "[function dependent]";
-		case 38: return "ERASE";
-		case 39: return "[reserved]";
-		case 40: return "[defined by DPS]";
-		case 41: return "[reserved]";
-		case 42: return "LOCK_UNLOCK";
-		case 48: return "READ_EXTR_SINGLE";
-		case 49: return "WRITE_EXTR_SINGLE";
-		case 50: return "[function dependent]";
-		case 51: return "[reserved]";
-		case 52: return "[sdio]";
-		case 53: return "[sdio]";
-		case 54: return "[sdio]";
-		case 55: return "APP_CMD";
-		case 56: return "GEN_CMD";
-		case 57: return "[function dependent]";
-		case 58: return "READ_EXTR_MULTI";
-		case 59: return "WRITE_EXTR_MULTI";
-		default: return "[invalid command number]";
-	}
-}
-
 void SDMMCAnalyzerResults::GenerateBubbleText(U64 frame_index, Channel& channel, DisplayBase display_base)
 {
 	ClearResultStrings();
@@ -95,7 +32,7 @@ void SDMMCAnalyzerResults::GenerateBubbleText(U64 frame_index, Channel& channel,
 			AddResultString("Card sending");
 		break;
 
-case FRAMETYPE_COMMAND:
+	case FRAMETYPE_COMMAND:
 	{
 		if (channel != mSettings->mCommandChannel)
 			break;
@@ -107,12 +44,12 @@ case FRAMETYPE_COMMAND:
 		AnalyzerHelpers::GetNumberString(frame.mData1, Decimal, 6, str_cmd, sizeof(str_cmd));
 		AnalyzerHelpers::GetNumberString(frame.mData2, display_base, 32, str_arg, sizeof(str_arg));
 
-		str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2);
+		str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2, mSettings->mProtocol);
 
 		AddResultString("CMD");
 		AddResultString("CMD", str_cmd);
 		AddResultString("CMD", str_cmd, ", arg=", str_arg, "  ", str_desc);
-		AddResultString("CMD", str_cmd, " (", cmd_abbrev_from_number(frame.mData1), "), arg=", str_arg);
+		AddResultString("CMD", str_cmd, " (", str_desc, "), arg=", str_arg);
 
 		switch (frame.mData1) {
 		case 3: //SET_RELATIVE_ADDR
@@ -488,6 +425,45 @@ case FRAMETYPE_COMMAND:
 		case MMC_RSP_R5:
 			AddResultString("R5");
 			break;
+		case SD_RSP_R6:
+		{
+			std::string res("R6");
+			char rsp_str[64];
+
+			AddResultString(res.c_str());
+
+			res += " [RCA]";
+			AddResultString(res.c_str());
+
+			res += " rsp=";
+			AnalyzerHelpers::GetNumberString(frame.mData1, display_base, 32, rsp_str, sizeof(rsp_str));
+			res += rsp_str;
+			res += " RCA=";
+			AnalyzerHelpers::GetNumberString((frame.mData1 >> 16) & 0xffff, display_base, 16, rsp_str, sizeof(rsp_str));
+			res += rsp_str;
+			res += " STAT_BITS=";
+			AnalyzerHelpers::GetNumberString(frame.mData1 & 0xffff, display_base, 16, rsp_str, sizeof(rsp_str));
+			res += rsp_str;
+			AddResultString(res.c_str());
+			break;
+		}
+		case SD_RSP_R7:
+		{
+			std::string res("R7");
+			char rsp_str[64];
+
+			AddResultString(res.c_str());
+
+			res += " [IF_COND]";
+			AddResultString(res.c_str());
+
+			res += " rsp=";
+			AnalyzerHelpers::GetNumberString(frame.mData1>>1, display_base, 32, rsp_str, sizeof(rsp_str));
+			res += rsp_str;
+			AddResultString(res.c_str());
+
+			break;
+		}
 		}
 		break;
 	}
@@ -565,13 +541,15 @@ void SDMMCAnalyzerResults::GenerateExportFile(const char* file, DisplayBase disp
 		switch (frame.mType) {
 		case FRAMETYPE_COMMAND:
 		{
+			const char *str_desc;
 			char str_cmd[4];
 			char str_arg[33];
+			str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2, mSettings->mProtocol);
 
 			AnalyzerHelpers::GetNumberString(frame.mData1, Decimal, 6, str_cmd, sizeof(str_cmd));
 			AnalyzerHelpers::GetNumberString(frame.mData2, display_base, 32, str_arg, sizeof(str_arg));
 
-			file_stream << "CMD" << str_cmd << "(" << cmd_abbrev_from_number(frame.mData1) << "), arg=" << str_arg << " ";
+			file_stream << "CMD" << str_cmd << "(" << str_desc << "), arg=" << str_arg << " ";
 			break;
 		}
 
@@ -864,7 +842,7 @@ void SDMMCAnalyzerResults::GenerateFrameTabularText(U64 frame_index, DisplayBase
 	const char *str_desc;
 	AnalyzerHelpers::GetNumberString(frame.mData1, Decimal, 6, str_cmd, sizeof(str_cmd));
 	AnalyzerHelpers::GetNumberString(frame.mData2, display_base, 32, str_arg, sizeof(str_arg));
-	str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2);
+	str_desc = SDMMCHelpers::MMCCommandDescription(frame.mData1, frame.mData2, mSettings->mProtocol);
 	AddTabularText("CMD", str_cmd, ", arg=", str_arg, " ", str_desc);
 }
 

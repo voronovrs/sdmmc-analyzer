@@ -2,6 +2,7 @@
 #define __SDMMC_HELPERS
 
 #include <Analyzer.h>
+#include "SDMMCAnalyzerSettings.h"
 
 enum MMCResponseType {
 	MMC_RSP_NONE,
@@ -11,6 +12,8 @@ enum MMCResponseType {
 	MMC_RSP_R3,
 	MMC_RSP_R4,
 	MMC_RSP_R5,
+	SD_RSP_R6,
+	SD_RSP_R7,
 };
 
 enum CommandReadPhase {
@@ -90,8 +93,8 @@ public:
 
 public:
 	static U8 crc7(const U8 *data, unsigned int size);
-	static struct MMCResponse MMCCommandResponse(unsigned int index);
-	static const char * MMCCommandDescription(unsigned int index, unsigned int args);
+	static struct MMCResponse MMCCommandResponse(unsigned int index, unsigned int protocol);
+	static const char * MMCCommandDescription(unsigned int index, unsigned int args, unsigned int protocol);
 
 private:
 	static U8 __crc7(U8 crc, U8 data);
