@@ -14,6 +14,7 @@ enum MMCResponseType {
 	MMC_RSP_R5,
 	SD_RSP_R6,
 	SD_RSP_R7,
+	SD_RSP_R1_SCR,
 };
 
 enum CommandReadPhase {

@@ -464,6 +464,20 @@ void SDMMCAnalyzerResults::GenerateBubbleText(U64 frame_index, Channel& channel,
 
 			break;
 		}
+		case SD_RSP_R1_SCR:
+		{
+			std::string res("R1 SCR");
+			char rsp_str[64];
+
+			AddResultString(res.c_str());
+
+			res += " rsp=";
+			AnalyzerHelpers::GetNumberString(frame.mData1>>1, display_base, 32, rsp_str, sizeof(rsp_str));
+			res += rsp_str;
+			AddResultString(res.c_str());
+
+			break;
+		}
 		}
 		break;
 	}

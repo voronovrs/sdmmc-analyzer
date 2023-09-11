@@ -119,7 +119,7 @@ static struct MMCResponse sd_responses[64] = {
 	/* 48 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
 	/* 49 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
 	/* 50 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
-	/* 51 */ {MMC_RSP_R1,      32,  64, false, true, false}, /* ACMD */
+	/* 51 */ {SD_RSP_R1_SCR,   32,  64, false, true, false}, /* ACMD */
 	/* 52 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
 	/* 53 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
 	/* 54 */ {MMC_RSP_NONE,     0,   0, false, false, false}, /* reserved */
